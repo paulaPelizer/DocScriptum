@@ -1,0 +1,176 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==================== Tokens ==================== */
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+
+    /* alinhando com o verde-água do tema escuro */
+    --primary: 180 100% 70%;
+    --primary-foreground: 180 100% 10%;
+    --ring: 180 100% 70%;
+
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --radius: 0.5rem;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 180 100% 70%;
+    --sidebar-primary-foreground: 180 100% 10%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 180 100% 70%;
+  }
+
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 6%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 6%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 180 100% 70%;
+    --primary-foreground: 180 100% 10%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 180 100% 70%;
+
+    /* Neon */
+    --neon-cyan: 180 100% 80%;
+    --neon-blue: 200 100% 75%;
+    --neon-purple: 280 100% 75%;
+    --neon-pink: 330 100% 75%;
+
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 180 100% 70%;
+    --sidebar-primary-foreground: 180 100% 10%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 180 100% 70%;
+  }
+
+  /* (opcional) classe light: usamos os tokens do :root, então pode ficar vazia */
+  .light {}
+}
+
+/* ==================== Components ==================== */
+@layer components {
+  .neon-border { @apply border border-transparent relative; }
+  .neon-border::after {
+    content: "";
+    @apply absolute inset-0 rounded-md pointer-events-none;
+    box-shadow: 0 0 10px 1px hsl(180 100% 70%);
+  }
+
+  .neon-text { color: hsl(180 100% 70%); }
+  .neon-cyan-text { color: hsl(var(--neon-cyan)); }
+  .neon-blue-text { color: hsl(var(--neon-blue)); }
+  .neon-purple-text { color: hsl(var(--neon-purple)); }
+  .neon-pink-text { color: hsl(var(--neon-pink)); }
+
+  /* ===== Glass navbar (efeito vidro sem borrar os itens) ===== */
+  .glass-nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 50;
+    isolation: isolate;   /* evita “vazar” efeitos do fundo */
+    overflow: hidden;     /* corta glows que passam dos limites */
+  }
+  .glass-nav::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    backdrop-filter: blur(12px) saturate(160%);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+    background: linear-gradient(to bottom, rgba(0,0,0,0.38), rgba(0,0,0,0.18));
+    border-bottom: 1px solid rgba(255,255,255,0.12);
+    box-shadow: 0 6px 24px rgba(0,0,0,0.28);
+    z-index: -1; /* fica atrás do conteúdo do header */
+  }
+  .light .glass-nav::before {
+    /* tema claro (apenas quando <html class="light">) */
+    background: linear-gradient(to bottom, rgba(255,255,255,0.18), rgba(255,255,255,0.08));
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+  }
+}
+
+/* ==================== Utilities ==================== */
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+}
+
+/* ==================== Base ==================== */
+@layer base {
+  * { @apply border-border; }
+
+  /* evita faixa preta no topo/rodapé e scroll lateral */
+  html, body, #root { height: 100%; }
+  body { margin: 0; overflow-x: hidden; }
+
+  /* corpo transparente pro vídeo aparecer */
+  body {
+    @apply text-[hsl(var(--foreground))];
+    background-color: transparent !important;
+  }
+
+  /* overlay entre o vídeo (-1) e o conteúdo (z-10) */
+  #root::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+  }
+  /* intensidade do overlay por tema */
+  .dark #root::before  { background: rgba(0, 0, 0, 0.40); }
+  .light #root::before { background: rgba(255, 255, 255, 0.20); }
+
+  /* Logo: glow no escuro, clean no claro (opcional) */
+  .dark img[alt="DocScriptum"] { filter: drop-shadow(0 0 8px hsl(180 100% 70% / 0.8)); }
+  .light img[alt="DocScriptum"] { filter: none; }
+}
+/* ===== BG YouTube sem cortar nas laterais (contain) ===== */
+.bg-video-wrap {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none; /* não intercepta cliques */
+  display: flex;
+  align-items: center;   /* centraliza verticalmente */
+  justify-content: center; /* centraliza horizontalmente */
+  overflow: hidden;      /* esconde barras caso sobrem poucos px */
+}
+
+/* Mantém 16:9 pela LARGURA => nunca corta laterais */
+.bg-video {
+  width: 100vw;
+  height: 56.25vw; /* 9/16 da largura */
+  border: 0;
+}
