@@ -5,5 +5,6 @@ import com.adi.docflow.model.OrgType;
 public record OrganizationDTO(
         Long id,
         String name,
-        OrgType orgType
+        OrgType orgType,
+        Integer qtdProjetos
 ) {}

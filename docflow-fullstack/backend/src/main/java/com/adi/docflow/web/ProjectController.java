@@ -17,6 +17,10 @@ import com.adi.docflow.web.dto.OrganizationDTO;
 import com.adi.docflow.web.dto.ProjectDTO;
 import com.adi.docflow.web.dto.ProjectListItemDTO;
 
+// ✅ novos imports
+import com.adi.docflow.web.dto.ProjectDetailDTO;
+import com.adi.docflow.service.ProjectService;
+
 import jakarta.transaction.Transactional;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
@@ -36,6 +40,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
@@ -53,13 +58,17 @@ public class ProjectController {
     // NEW: para gerar documentos “placeholder”
     private final DocumentRepository docRepo;
 
+    // ✅ service para montar o detalhe completo
+    private final ProjectService projectService;
+
     public ProjectController(
             ProjectRepository projectRepo,
             OrganizationRepository orgRepo,
             ProjectDisciplineRepository projDiscRepo,
             ProjectDisciplineDocTypeRepository projDiscDocTypeRepo,
             ProjectMilestoneRepository milestoneRepo,
-            DocumentRepository docRepo
+            DocumentRepository docRepo,
+            ProjectService projectService
     ) {
         this.projectRepo = projectRepo;
         this.orgRepo = orgRepo;
@@ -67,6 +76,7 @@ public class ProjectController {
         this.projDiscDocTypeRepo = projDiscDocTypeRepo;
         this.milestoneRepo = milestoneRepo;
         this.docRepo = docRepo;
+        this.projectService = projectService;
     }
 
     // ---- helpers ----
@@ -93,12 +103,19 @@ public class ProjectController {
 
     private OrganizationDTO toDTO(Organization o) {
         if (o == null) return null;
-        return new OrganizationDTO(o.getId(), o.getName(), o.getOrgType());
+        return new OrganizationDTO(o.getId(), o.getName(), o.getOrgType(), o.getQtdProjetos());
     }
 
     private ProjectDTO toDTO(Project p) {
         if (p == null) return null;
-        return new ProjectDTO(p.getId(), p.getCode(), p.getName(), toDTO(p.getClient()));
+        // ✅ incluir status como 4º argumento do record ProjectDTO
+        return new ProjectDTO(
+                p.getId(),
+                p.getCode(),
+                p.getName(),
+                p.getStatus(),
+                toDTO(p.getClient())
+        );
     }
 
     // ---------- ENDPOINTS ----------
@@ -127,7 +144,10 @@ public class ProjectController {
             p.setClient(client);
         }
 
-        p.setStatus(dto.statusInicial()); // pode ser null: tudo bem
+        // ✅ record -> usar dto.description() (não getDescription)
+        p.setDescription(dto.description());
+
+        p.setStatus(dto.statusInicial()); // pode ser null
         p.setStartDate(parseDateOrNull(dto.dataInicio()));
         p.setPlannedEndDate(parseDateOrNull(dto.dataPrevistaConclusao()));
         p.setUpdatedAt(Instant.now());
@@ -210,6 +230,17 @@ public class ProjectController {
         return projectRepo.findById(id)
                 .map(p -> ResponseEntity.ok(toDTO(p)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    // ✅ NOVO: detalhe completo (dados + marcos + documentos)
+    @GetMapping("/{id}/detail")
+    @Transactional(Transactional.TxType.SUPPORTS)
+    public ResponseEntity<ProjectDetailDTO> getDetail(@PathVariable("id") Long id) {
+        try {
+            return ResponseEntity.ok(projectService.getProjectDetail(id));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 
     @GetMapping

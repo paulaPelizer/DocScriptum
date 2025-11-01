@@ -1,6 +1,7 @@
 import * as React from "react"
 import { Suspense } from "react"
 import type { RouteObject } from "react-router-dom"
+/*import { PrivateRoute } from "@/components/PrivateRoute"*/
 import { PrivateRoute } from "@/components/PrivateRoute"
 import { Navigate, Outlet } from "react-router-dom";
 import { getToken } from "@/services/auth";

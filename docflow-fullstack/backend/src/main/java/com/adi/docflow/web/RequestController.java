@@ -29,7 +29,7 @@ public class RequestController {
 
     private OrganizationDTO toDTO(Organization o) {
         if (o == null) return null;
-        return new OrganizationDTO(o.getId(), o.getName(), o.getOrgType());
+        return new OrganizationDTO(o.getId(), o.getName(), o.getOrgType(), o.getQtdProjetos());
     }
 
     private ProjectDTO toDTO(Project p) {
@@ -38,6 +38,7 @@ public class RequestController {
                 p.getId(),
                 p.getCode(),
                 p.getName(),
+                p.getDescription(),
                 toDTO(p.getClient())
         );
     }

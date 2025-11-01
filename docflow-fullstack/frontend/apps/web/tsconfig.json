@@ -1,5 +1,5 @@
 {
-  "extends": "C:/Users/Paula Pelizer/Downloads/projetoFinalMaisPraTi_Paula-main/projetoFinalMaisPraTi_Paula-main/docflow-fullstack/frontend/tsconfig.base.json",
+  "extends": "C:/Users/Paula Pelizer/Downloads/projetoFinalMaisPraTi_Paula-main/docflow-fullstack/frontend/tsconfig.base.json",
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {

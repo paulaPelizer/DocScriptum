@@ -1,3 +1,4 @@
+// src/main/java/com/adi/docflow/repository/ProjectRepository.java
 package com.adi.docflow.repository;
 
 import com.adi.docflow.model.Project;
@@ -9,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface ProjectRepository extends JpaRepository<Project, Long> {
 
@@ -18,21 +20,17 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
             String code, String name, Pageable pageable
     );
 
-    // -------- Listagem para a página /table --------
-    // Observação: a entidade de documento deve se chamar "Document" e ter ManyToOne "project".
-    // Se o nome/relacionamento for diferente, me diga que ajusto a cláusula "from Document d where d.project.id = p.id".
-
+    // ---------- Listagem p/ tabela ----------
     @Query(
         value = "select new com.adi.docflow.web.dto.ProjectListItemDTO(" +
                 " p.id, " +
                 " p.name, " +
                 " coalesce(c.name, '—'), " +
-                " (select count(d) from Document d where d.project.id = p.id), " + // conta docs por projeto
+                " (select count(d) from Document d where d.project.id = p.id), " +
                 " p.status, " +
-                " p.updatedAt " +                                                // simples e compatível
+                " p.updatedAt " +
                 ") " +
-                "from Project p " +
-                "left join p.client c " +
+                "from Project p left join p.client c " +
                 "where (:status is null or p.status = :status) " +
                 "order by p.updatedAt desc",
         countQuery = "select count(p.id) from Project p where (:status is null or p.status = :status)"
@@ -48,10 +46,20 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
         " p.status, " +
         " p.updatedAt " +
         ") " +
-        "from Project p " +
-        "left join p.client c " +
+        "from Project p left join p.client c " +
         "where (:status is null or p.status = :status) " +
         "order by p.updatedAt desc"
     )
     List<ProjectListItemDTO> findListItems(@Param("status") String status);
+
+    // ---------- Detalhe p/ ProjectService ----------
+    // Importante: sem join de documentos, pois Project não tem coleção 'documents'
+    @Query("""
+        select distinct p
+        from Project p
+          left join fetch p.client c
+          left join fetch p.milestones m
+        where p.id = :id
+    """)
+    Optional<Project> findWithRelations(@Param("id") Long id);
 }

@@ -18,6 +18,9 @@ public class Project {
     @Column(name = "name")
     private String name;
 
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "client_id")
     private Organization client;
@@ -77,4 +80,7 @@ public class Project {
     public void setDisciplines(List<ProjectDiscipline> disciplines) { this.disciplines = disciplines; }
     public List<ProjectMilestone> getMilestones() { return milestones; }
     public void setMilestones(List<ProjectMilestone> milestones) { this.milestones = milestones; }
-}
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
+
+  }

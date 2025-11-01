@@ -1,4 +1,4 @@
-// frontend/apps/web/src/pages/projects/new/index.tsx
+// src/pages/projects/new/index.tsx
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -15,58 +15,17 @@ import { PageHeader } from "@/components/page-header";
 import AppHeader from "@/components/AppHeader";
 import type { Document as ProjectDoc, Disciplina, Milestone, User } from "@/types/project";
 
-// ----------------- HTTP helpers -----------------
-const API_BASE = "/api/v1";
-const joinURL = (b: string, p: string) => `${b.replace(/\/+$/, "")}/${p.replace(/^\/+/, "")}`;
-
-async function getJSON<T>(path: string): Promise<T> {
-  const url = joinURL(API_BASE, path);
-  const res = await fetch(url);
-  if (!res.ok) {
-    const txt = await res.text().catch(() => "");
-    throw new Error(`GET ${url} -> ${res.status} ${res.statusText}\n${txt}`);
-  }
-  return (await res.json()) as T;
-}
-
-async function postJSON<T>(path: string, body: unknown): Promise<T> {
-  const url = joinURL(API_BASE, path);
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-
-  const raw = await res.text().catch(() => "");
-  if (!res.ok) {
-    let msg = raw || res.statusText;
-    try {
-      const parsed = JSON.parse(raw);
-      msg = parsed?.message || raw || res.statusText;
-    } catch {}
-    const err: any = new Error(`POST ${url} -> HTTP ${res.status} ${res.statusText}\n${msg}`);
-    err.status = res.status;
-    err.body = raw;
-    throw err;
-  }
-
-  if (!raw) return undefined as T;
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return undefined as T;
-  }
-}
+import { apiGet, apiPost } from "@/services/api"; // wrapper central
 
 // ----------------- Tipos locais -----------------
 type NewProjectForm = {
   name: string;
   code: string;
   clientId: number | null;
-  description: string; // (somente UI)
-  status: string; // UI -> statusInicial
-  startDate: string; // UI (YYYY-MM-DD)
-  endDate: string; // UI (YYYY-MM-DD)
+  description: string; // (UI)
+  status: string;      // UI -> statusInicial
+  startDate: string;   // UI (YYYY-MM-DD)
+  endDate: string;     // UI (YYYY-MM-DD)
 };
 
 type ClientOption = { id: number; name: string };
@@ -76,7 +35,7 @@ type PageResp<T> = { content: T[]; totalElements: number; totalPages: number; nu
 
 type OrganizationDTO = { id: number; name: string; orgType?: string };
 
-// gera um código simples e (bem) único
+// gera um código simples
 const genCode = () => `PROJ-${Date.now().toString(36).toUpperCase()}`;
 
 // === helpers de data e mapeamento ===
@@ -100,16 +59,17 @@ function normalizeOrgs(resp: OrganizationDTO[] | PageResp<OrganizationDTO>): Org
 }
 
 async function fetchClientsSmart(): Promise<ClientOption[]> {
-  // via proxy do Vite: /api/v1/orgs?type=CLIENT
   const candidates = ["/orgs?type=CLIENT&size=1000", "/orgs?type=CLIENT"];
   const errors: string[] = [];
   for (const path of candidates) {
     try {
-      const data = await getJSON<OrganizationDTO[] | PageResp<OrganizationDTO>>(path);
+      const data = await apiGet<OrganizationDTO[] | PageResp<OrganizationDTO>>(path);
       const items = normalizeOrgs(data).map((o) => ({ id: o.id, name: o.name }));
       if (items.length || path.endsWith("CLIENT")) return items;
     } catch (e: any) {
-      errors.push(`- ${path}: ${e.message?.split("\n")[0] ?? e}`);
+      const msg = String(e?.message || "");
+      if (msg.toLowerCase().includes("não autorizado")) throw e;
+      errors.push(`- ${path}: ${msg.split("\n")[0]}`);
     }
   }
   throw new Error(`Nenhuma rota de clientes encontrada:\n${errors.join("\n")}`);
@@ -132,8 +92,10 @@ export default function NewProjectPage() {
         const list = await fetchClientsSmart();
         setClients(list);
       } catch (e: any) {
+        const msg = String(e?.message || "Falha ao carregar clientes");
+        if (msg.toLowerCase().includes("não autorizado")) return;
         console.error("[clients] falha:", e);
-        setClientsError(e?.message ?? "Falha ao carregar clientes");
+        setClientsError(msg);
         setClients([]);
       } finally {
         setClientsLoading(false);
@@ -267,17 +229,20 @@ export default function NewProjectPage() {
         statusInicial,
         dataInicio,
         dataPrevistaConclusao,
+        description: projectData.description.trim() || null, // <<< ADICIONADO
         disciplinas: disciplinasDTO,
         marcos: marcosDTO,
       };
 
       console.log("[POST] /projects payload:", payload);
-      await postJSON<any>("/projects", payload);
+      await apiPost<any>("/projects", payload); // wrapper central já prefixa /api/v1
 
       navigate("/projects");
     } catch (err: any) {
+      const msg = String(err?.message || "Erro ao criar projeto.");
+      if (msg.toLowerCase().includes("não autorizado")) return;
       console.error(err);
-      alert(err?.message ?? "Erro ao criar projeto.");
+      alert(msg);
     } finally {
       setIsLoading(false);
     }
@@ -409,7 +374,7 @@ export default function NewProjectPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="description">Descrição (UI)</Label>
+                  <Label htmlFor="description">Descrição</Label>
                   <Textarea
                     id="description"
                     placeholder="Descreva o projeto..."
@@ -452,7 +417,7 @@ export default function NewProjectPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="status">Status Inicial (UI)</Label>
+                    <Label htmlFor="status">Status Inicial</Label>
                     <Select value={projectData.status} onValueChange={(value) => updateField("status", value)}>
                       <SelectTrigger>
                         <SelectValue />
@@ -467,9 +432,9 @@ export default function NewProjectPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md-grid-cols-2 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="start-date">Data de Início (UI)</Label>
+                    <Label htmlFor="start-date">Data de Início</Label>
                     <Input
                       id="start-date"
                       type="date"
@@ -478,7 +443,7 @@ export default function NewProjectPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="end-date">Data Prevista de Conclusão (UI)</Label>
+                    <Label htmlFor="end-date">Data Prevista de Conclusão</Label>
                     <Input
                       id="end-date"
                       type="date"

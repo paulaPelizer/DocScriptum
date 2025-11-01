@@ -15,7 +15,6 @@ logging:
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
 
-
 spring:
   datasource:
     url: jdbc:sqlserver://127.0.0.1:1433;databaseName=docflow;encrypt=true;trustServerCertificate=true;
@@ -30,7 +29,7 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.SQLServerDialect
-        default_schema: app        # 👈 garante que o Hibernate olhe para o schema 'app'
+        default_schema: app
         jdbc.time_zone: UTC
     show-sql: false
     database-platform: org.hibernate.dialect.SQLServerDialect
@@ -38,18 +37,26 @@ spring:
   flyway:
     enabled: true
     schemas: app
-    create-schemas: true          
+    create-schemas: true
     locations: classpath:db/migration
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: always
 
 security:
   jwt:
-    secret: "47c494cec5707734249282b70b949039"
+    secret: "47c494cec5707734249282b70b949039"   # >=32 bytes (ok)
     exp-minutes: 120
     clock-skew-seconds: 30
 
-
-  demo:
-    # usuário padrão temporário (fase 1)
-    username: "admin@docflow"
-    password: "admin"
-    roles: "ADMIN"
+# <<< importante: 'demo' no nível RAIZ >>>
+demo:
+  username: "admin@docflow"
+  password: "admin"
+  roles: "ADMIN"

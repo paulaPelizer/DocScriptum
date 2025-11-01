@@ -1,0 +1,58 @@
+# ==========================
+# NODE / FRONTEND
+# ==========================
+node_modules/
+.pnpm-store/
+dist/
+build/
+.vite/
+.env
+.env.local
+.env.*.local
+.pnpm-debug.log
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Cache e logs do Vite e Turbo
+.vscode/
+.idea/
+turbo/
+*.log
+
+# Arquivos de lock alternativos
+package-lock.json
+yarn.lock
+
+# ==========================
+# JAVA / BACKEND (MAVEN)
+# ==========================
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.log
+hs_err_pid*.log
+replay_pid*.log
+
+# ==========================
+# SISTEMA / SO
+# ==========================
+.DS_Store
+Thumbs.db
+
+# ==========================
+# BUILD / TEMP / OUTROS
+# ==========================
+out/
+.tmp/
+.cache/
+coverage/
+
+# ==========================
+# CONFIG / IDE
+# ==========================
+*.iml
+.idea/
+.vscode/

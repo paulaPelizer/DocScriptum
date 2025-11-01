@@ -1,38 +1,39 @@
 // src/pages/login/index.tsx
-import { useState } from "react"
-import { useNavigate } from "react-router-dom"
-import { login } from "@/services/auth"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { login, finishLogin } from "@/services/auth";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function LoginPage() {
-  const [username, setUsername] = useState("admin@docflow")
-  const [password, setPassword] = useState("admin")
-  const [error, setError] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const navigate = useNavigate()
+  const [username, setUsername] = useState("admin@docflow");
+  const [password, setPassword] = useState("admin");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault()
-  setError("")
-  setIsLoading(true)
+    e.preventDefault();
+    setError("");
+    setIsLoading(true);
 
-  try {
-    const ok = await login(username, password)
-    if (ok) {
-      navigate("/projects")
-    } else {
-      // login() retorna false se falhar silenciosamente
-      setError("Falha ao autenticar. Tente novamente.")
+    try {
+      // faz login e tenta obter token (JWT ou fluxo cookie)
+      const token = await login(username, password);
+
+      // finaliza login e redireciona:
+      // - se veio returnTo na URL (ex: /login?returnTo=/projects/new)
+      // - senão usa rota salva em storage
+      // - senão /projects
+      finishLogin(token ?? undefined, navigate);
+    } catch (err: any) {
+      setError(err?.message ?? "Falha ao autenticar");
+    } finally {
+      setIsLoading(false);
     }
-  } catch (err: any) {
-    setError(err?.message ?? "Falha ao autenticar")
-  } finally {
-    setIsLoading(false)
-  }
-}
-
+  };
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden flex items-center justify-center">
@@ -100,5 +101,5 @@ export default function LoginPage() {
         </form>
       </div>
     </div>
-  )
+  );
 }

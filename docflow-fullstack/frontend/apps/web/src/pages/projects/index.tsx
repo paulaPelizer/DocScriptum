@@ -1,3 +1,4 @@
+// src/pages/projects/index.tsx
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -17,6 +18,8 @@ import { FolderKanban, MoreHorizontal, Plus, Search, Users, Edit } from "lucide-
 import { PageHeader } from "@/components/page-header";
 import AppHeader from "@/components/AppHeader";
 
+import { apiGet } from "@/services/api";
+
 type ProjectListItem = {
   id: number;
   nome: string;
@@ -34,13 +37,11 @@ type PageResp<T> = {
   size: number;
 };
 
-const API_BASE = import.meta.env.VITE_API_BASE ?? ""; // ex.: http://localhost:8080
-
 function formatRelative(iso: string | null) {
   if (!iso) return "—";
   const now = new Date();
   const dt = new Date(iso);
-  const diffMs = dt.getTime() - now.getTime(); // negative = passado
+  const diffMs = dt.getTime() - now.getTime();
   const rtf = new Intl.RelativeTimeFormat("pt-BR", { numeric: "auto" });
 
   const sec = Math.round(diffMs / 1000);
@@ -60,6 +61,15 @@ function formatRelative(iso: string | null) {
   return rtf.format(year, "year");
 }
 
+/** normaliza string para busca: lower + remove acentos + trim */
+function norm(s: string | null | undefined) {
+  return (s ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .trim();
+}
+
 export default function ProjectsPage() {
   const navigate = useNavigate();
   const [selectedProjects, setSelectedProjects] = useState<number[]>([]);
@@ -67,11 +77,13 @@ export default function ProjectsPage() {
   const [loading, setLoading] = useState(true);
   const [errMsg, setErrMsg] = useState<string | null>(null);
 
-  // estados de busca e paginação (pode ligar com querystring depois)
-  const [q] = useState<string>(""); // ainda não usado no endpoint /table; mantido para futura busca
-  const [status] = useState<string>(""); // idem
+  // busca local
+  const [q, setQ] = useState<string>("");
+
+  // paginação (carregamos mais itens para a busca local ficar boa)
   const [page] = useState<number>(0);
-  const [size] = useState<number>(20);
+  const [size] = useState<number>(100);
+  const [status] = useState<string>(""); // reservado p/ futuro filtro de backend
 
   useEffect(() => {
     let abort = false;
@@ -79,19 +91,21 @@ export default function ProjectsPage() {
       setLoading(true);
       setErrMsg(null);
       try {
-        const url = new URL("/api/v1/projects/table", API_BASE || window.location.origin);
-        url.searchParams.set("page", String(page));
-        url.searchParams.set("size", String(size));
-        if (status) url.searchParams.set("status", status);
+        const params = new URLSearchParams();
+        params.set("page", String(page));
+        params.set("size", String(size));
+        if (status) params.set("status", status);
 
-        const res = await fetch(url.toString(), {
-          credentials: "include",
-        });
-        if (!res.ok) throw new Error(`Falha ao carregar projetos (${res.status})`);
-        const json = (await res.json()) as PageResp<ProjectListItem>;
+        // IMPORTANTE: passar só o path para o wrapper (ele resolve a base)
+        const json = await apiGet<PageResp<ProjectListItem>>(
+          `/projects/table?${params.toString()}`
+        );
+
         if (!abort) setData(json);
       } catch (e: any) {
-        if (!abort) setErrMsg(e?.message ?? "Erro desconhecido");
+        const msg = String(e?.message || "Erro desconhecido");
+        // se for 401/403, o wrapper já redirecionou
+        if (!abort && !msg.toLowerCase().includes("não autorizado")) setErrMsg(msg);
       } finally {
         if (!abort) setLoading(false);
       }
@@ -100,9 +114,32 @@ export default function ProjectsPage() {
     return () => {
       abort = true;
     };
-  }, [page, size, status, q]); // q está aqui para futuro filtro
+  }, [page, size, status]);
 
   const projects = useMemo(() => data?.content ?? [], [data]);
+
+  /** lista filtrada em tempo real (nome/cliente/status/id) */
+  const filtered = useMemo(() => {
+    const nq = norm(q);
+    if (!nq) return projects;
+    return projects.filter((p) => {
+      const nNome = norm(p.nome);
+      const nCliente = norm(p.cliente);
+      const nStatus = norm(p.status);
+      const nId = String(p.id);
+      return (
+        nNome.includes(nq) ||
+        nCliente.includes(nq) ||
+        nStatus.includes(nq) ||
+        nId.includes(nq)
+      );
+    });
+  }, [projects, q]);
+
+  // ao mudar o filtro, readequar seleção
+  useEffect(() => {
+    setSelectedProjects((prev) => prev.filter((id) => filtered.some((p) => p.id === id)));
+  }, [filtered]);
 
   const handleSelectProject = (projectId: number) => {
     setSelectedProjects((prev) =>
@@ -111,7 +148,7 @@ export default function ProjectsPage() {
   };
 
   const handleSelectAll = () => {
-    setSelectedProjects((prev) => (prev.length === projects.length ? [] : projects.map((p) => p.id)));
+    setSelectedProjects((prev) => (prev.length === filtered.length ? [] : filtered.map((p) => p.id)));
   };
 
   const handleEditSelected = () => {
@@ -141,7 +178,8 @@ export default function ProjectsPage() {
                   type="search"
                   placeholder="Buscar projetos..."
                   className="w-full md:w-[250px] pl-8"
-                  // onChange={(e) => setQ(e.target.value)} // quando backend suportar q
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
                 />
               </div>
 
@@ -178,7 +216,7 @@ export default function ProjectsPage() {
                     <TableRow>
                       <TableHead className="w-12">
                         <Checkbox
-                          checked={selectedProjects.length === projects.length && projects.length > 0}
+                          checked={filtered.length > 0 && selectedProjects.length === filtered.length}
                           onCheckedChange={handleSelectAll}
                           aria-label="Selecionar todos"
                         />
@@ -192,7 +230,7 @@ export default function ProjectsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {projects.map((project) => (
+                    {filtered.map((project) => (
                       <TableRow key={project.id}>
                         <TableCell>
                           <Checkbox
@@ -259,7 +297,7 @@ export default function ProjectsPage() {
                         </TableCell>
                       </TableRow>
                     ))}
-                    {projects.length === 0 && (
+                    {filtered.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={7} className="py-6 text-sm text-muted-foreground">
                           Nenhum projeto encontrado.
