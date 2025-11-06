@@ -1,9 +1,10 @@
+// src/main/java/com/adi/docflow/config/security/SecurityConfig.java
 package com.adi.docflow.config.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -20,6 +21,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import org.springframework.web.cors.CorsConfiguration;
@@ -31,97 +33,94 @@ import java.util.List;
 @Configuration
 public class SecurityConfig {
 
-  // --------- Beans básicos ---------
+    /* ========= Beans básicos ========= */
 
-  @Bean
-  public PasswordEncoder passwordEncoder() {
-    return new BCryptPasswordEncoder();
-  }
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
 
-  @Bean
-  public AuthenticationManager authenticationManager(AuthenticationConfiguration cfg) throws Exception {
-    return cfg.getAuthenticationManager();
-  }
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration cfg) throws Exception {
+        return cfg.getAuthenticationManager();
+    }
 
-  @Bean
-  public AuthenticationProvider authenticationProvider(UserDetailsService uds, PasswordEncoder enc) {
-    DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-    provider.setUserDetailsService(uds);
-    provider.setPasswordEncoder(enc);
-    return provider;
-  }
+    @Bean
+    public AuthenticationProvider authenticationProvider(UserDetailsService uds, PasswordEncoder enc) {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        provider.setUserDetailsService(uds);
+        provider.setPasswordEncoder(enc);
+        return provider;
+    }
 
-  @Bean
-  public JwtAuthFilter jwtAuthFilter(JwtService jwtService, UserDetailsService uds) {
-    return new JwtAuthFilter(jwtService, uds);
-  }
+    @Bean
+    public JwtAuthFilter jwtAuthFilter(JwtService jwtService, UserDetailsService uds) {
+        return new JwtAuthFilter(jwtService, uds);
+    }
 
-  // --------- CHAIN 1: ROTAS ABERTAS (pega primeiro) ---------
-  // Tudo aqui é liberado SEM JWT.
-  @Bean
-  @Order(0)
-  public SecurityFilterChain openEndpoints(HttpSecurity http) throws Exception {
-    http
-      .securityMatcher(
-        "/api/v1/auth/**",
-        "/api/v1/health",
-        "/actuator/health",
-        "/v3/api-docs/**",
-        "/swagger-ui/**",
-        "/swagger-ui.html",
-        // ✅ abrir completamente clients e projects no DEV
-        "/api/v1/clients",
-        "/api/v1/clients/**",
-        "/api/v1/projects",
-        "/api/v1/projects/**",
-        // (se quiser abrir orgs também)
-        "/api/v1/orgs",
-        "/api/v1/orgs/**"
-      )
-      .csrf(csrf -> csrf.disable())
-      .cors(Customizer.withDefaults())
-      .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-      .authorizeHttpRequests(auth -> auth
-        // preflight
-        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-        // tudo que casar com este matcher é liberado
-        .anyRequest().permitAll()
-      );
-    // IMPORTANTE: não adicionamos provider nem filtro JWT aqui
-    return http.build();
-  }
+    /* ========= CORS ========= */
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration cfg = new CorsConfiguration();
+        // Ajuste origens conforme precisar nos testes
+        cfg.setAllowedOriginPatterns(List.of("http://localhost:*", "http://127.0.0.1:*"));
+        cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        cfg.setAllowedHeaders(List.of("*"));
+        cfg.setExposedHeaders(List.of("Authorization"));
+        cfg.setAllowCredentials(true);
 
-  // --------- CHAIN 2: DEMAIS ROTAS (requer JWT) ---------
-  @Bean
-  @Order(1)
-  public SecurityFilterChain securedEndpoints(HttpSecurity http,
-                                              AuthenticationProvider authProvider,
-                                              JwtAuthFilter jwtAuthFilter) throws Exception {
-    http
-      .csrf(csrf -> csrf.disable())
-      .cors(Customizer.withDefaults())
-      .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-      .authorizeHttpRequests(auth -> auth
-        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-        .anyRequest().authenticated()
-      )
-      .authenticationProvider(authProvider)
-      .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", cfg);
+        return source;
+    }
 
-    return http.build();
-  }
+    /* ========= Security Chain (PERMIT ALL) ========= */
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http,
+                                                   AuthenticationProvider authProvider,
+                                                   JwtAuthFilter jwtAuthFilter) throws Exception {
 
-  // --------- CORS ---------
-  @Bean
-  public CorsConfigurationSource corsConfigurationSource() {
-    CorsConfiguration cfg = new CorsConfiguration();
-    cfg.setAllowedOriginPatterns(List.of("http://localhost:*", "http://127.0.0.1:*"));
-    cfg.setAllowedMethods(List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
-    cfg.setAllowedHeaders(List.of("*"));
-    cfg.setAllowCredentials(true);
+        http
+            .csrf(csrf -> csrf.disable())
+            .cors(Customizer.withDefaults())
+            .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-    source.registerCorsConfiguration("/**", cfg);
-    return source;
-  }
+            .authorizeHttpRequests(auth -> auth
+                // Preflight e páginas públicas
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                .requestMatchers("/error").permitAll()
+
+                // Swagger & health
+                .requestMatchers(
+                    "/v3/api-docs/**",
+                    "/swagger-ui/**",
+                    "/swagger-ui.html",
+                    "/api/v1/health",
+                    "/actuator/health"
+                ).permitAll()
+
+                // Auth endpoints
+                .requestMatchers("/api/v1/auth/**").permitAll()
+
+                // >>>>> Libera TUDO da API (todas as operações) por enquanto
+                .requestMatchers("/api/v1/**").permitAll()
+
+                // E o restante também
+                .anyRequest().permitAll()
+            )
+
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
+                .accessDeniedHandler((req, res, e) -> {
+                    res.setStatus(HttpStatus.FORBIDDEN.value());
+                    res.getWriter().write("Acesso negado");
+                })
+            )
+
+            // Mantém provider e filtro (não bloqueiam nada com permitAll)
+            .authenticationProvider(authProvider)
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
+    }
 }

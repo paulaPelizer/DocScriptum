@@ -1,3 +1,4 @@
+// src/components/main-nav.tsx
 import { Link, useLocation } from "react-router-dom"
 import { cn } from "@/lib/utils"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -18,11 +19,12 @@ export function MainNav({ className, currentPath }: MainNavProps) {
     { href: "/dashboard",  label: "Dashboard" },
     { href: "/projects",   label: "Projetos" },
     { href: "/planning",   label: "Planejamento" },
-    { href: "/clients",    label: "Clientes" },
-    { href: "/suppliers",  label: "Fornecedores" },
+    { href: "/clients",    label: "Parceiros" },
+    { href: "/resources",  label: "Recursos" },     // ✅ aponta para /resources
     { href: "/documents",  label: "Documentos" },
     { href: "/requests",   label: "Solicitações" },
     { href: "/grds",       label: "GRDs" },
+    { href: "/mensageria", label: "Mensageria" },   // ✅ link ativo para a nova página
   ]
 
   // se o app estiver servindo em subpasta, usa BASE_URL
@@ -30,9 +32,9 @@ export function MainNav({ className, currentPath }: MainNavProps) {
 
   return (
     <header className={cn("glass-nav", className)}>
-      {/* aumentei a altura do header para caber a logo maior */}
+      {/* altura maior para a logo */}
       <div className="mx-auto max-w-screen-2xl h-20 px-6 flex items-center justify-between">
-        {/* Logo (arquivo em: frontend/apps/web/public/docscriptum-logo.png) */}
+        {/* Logo (arquivo em: public/docscriptum-logo.png) */}
         <Link to="/" className="flex items-center gap-2 font-semibold" aria-label="Ir para início">
           <img
             src={`${base}docscriptum-logo.png`}
@@ -55,13 +57,14 @@ export function MainNav({ className, currentPath }: MainNavProps) {
                     ? "text-primary underline underline-offset-4"
                     : "text-foreground/80 hover:text-primary"
                 )}
+                aria-current={path.startsWith(item.href) ? "page" : undefined}
               >
                 {item.label}
               </Link>
             ))}
           </nav>
 
-          {/* Botão para alternar vídeo (A/B) e tema (claro/escuro) */}
+          {/* Switch de estilo e tema */}
           <div className="flex items-center gap-2">
             <StyleSwitch />
             <ThemeToggle />

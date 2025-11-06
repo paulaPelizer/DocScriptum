@@ -52,11 +52,34 @@ management:
 security:
   jwt:
     secret: "47c494cec5707734249282b70b949039"   # >=32 bytes (ok)
-    exp-minutes: 120
-    clock-skew-seconds: 30
+    exp-minutes: 120          # <<< duração do token JWT em minutos (tempo de sessão)
+    clock-skew-seconds: 30    # tolerância de relógio entre servidor/cliente
 
-# <<< importante: 'demo' no nível RAIZ >>>
-demo:
-  username: "admin@docflow"
-  password: "admin"
-  roles: "ADMIN"
+app:
+  auth:
+    registration:
+      dba-token: "TOKEN_DBA_SECRETO"
+      admin-token: "TOKEN_ADMIN_SECRETO"
+      resource-token: "TOKEN_RESOURCE_SECRETO"
+      user-token: "TOKEN_USER_SECRETO"
+
+# Se quiser reduzir o tempo para pedir login de novo,
+# basta diminuir o security.jwt.exp-minutes (ex: 30).
+
+# <<<spring:
+# <<<  mail:
+# <<<    host: smtp.gmail.com
+# <<<    port: 587
+# <<<    username: "seu_email@gmail.com"
+# <<<    password: "sua_senha_ou_app_password"
+# <<<    properties:
+# <<<      mail:
+# <<<        smtp:
+# <<<          auth: true
+# <<<          starttls:
+# <<<            enable: true
+# <<<
+# <<<app:
+# <<<  mail:
+# <<<    from: "docflow@seudominio.com">>>
+# <<<

@@ -2,6 +2,7 @@ package com.adi.docflow.model;
 
 import jakarta.persistence.*;
 import java.time.Instant;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "document", schema = "app")
@@ -11,7 +12,8 @@ public class Document {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Deixe nullable = true por enquanto para lidar com legados sem vínculo
+    // Mantém relacionamento existente
+    // nullable = true para lidar com legados sem vínculo
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_id", nullable = true)
     private Project project;
@@ -19,7 +21,7 @@ public class Document {
     @Column(name = "code", nullable = false)
     private String code;
 
-    // "title" mapeia para a coluna "name" no banco
+    // "title" mapeia para a coluna "name" no banco (mantido)
     @Column(name = "name", nullable = false)
     private String title;
 
@@ -35,9 +37,59 @@ public class Document {
     @Column(name = "file_url")
     private String fileUrl;
 
-    // === NOVO: status do documento ===
+    // === status existente (usado como "Status Inicial") ===
     @Column(name = "status", length = 30)
-    private String status = "PLANNED"; // padrão inicial para placeholders
+    private String status = "PLANNED";
+
+    // =========================
+    // NOVOS CAMPOS (formulário)
+    // =========================
+
+    // IDs auxiliares vindos dos GETs do formulário
+    @Column(name = "client_id")
+    private Long clientId;
+
+    @Column(name = "discipline_id")
+    private Long disciplineId;
+
+    @Column(name = "document_type_id")
+    private Long documentTypeId;
+
+    // Informações do documento
+    @Column(name = "species", length = 120)
+    private String species; // "Espécie de Documento"
+
+    // Em SQL Server usamos VARCHAR(MAX); columnDefinition garante mapeamento.
+    // Se preferir portabilidade, pode remover o columnDefinition.
+    @Column(name = "description", columnDefinition = "VARCHAR(MAX)")
+    private String description;
+
+    @Column(name = "layout_ref", length = 120)
+    private String layoutRef; // "Layout (ISO/Referência)"
+
+    @Column(name = "template_id")
+    private Long templateId;  // se o template for entidade depois, podemos relacionar
+
+    // Responsabilidade e prazos
+    @Column(name = "technical_responsible", length = 150)
+    private String technicalResponsible;
+
+    @Column(name = "performed_date")
+    private LocalDate performedDate; // "Data Realizado"
+
+    @Column(name = "due_date")
+    private LocalDate dueDate;       // "Data Prevista"
+
+    // Status/Localização/Observações adicionais
+    @Column(name = "current_location", length = 60)
+    private String currentLocation; // "Localização Atual"
+
+    @Column(name = "remarks", columnDefinition = "VARCHAR(MAX)")
+    private String remarks;         // "Observações"
+
+    // Upload (hash fictícia por enquanto)
+    @Column(name = "upload_hash", length = 120)
+    private String uploadHash;
 
     // === timestamps ===
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -87,6 +139,45 @@ public class Document {
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    public Long getClientId() { return clientId; }
+    public void setClientId(Long clientId) { this.clientId = clientId; }
+
+    public Long getDisciplineId() { return disciplineId; }
+    public void setDisciplineId(Long disciplineId) { this.disciplineId = disciplineId; }
+
+    public Long getDocumentTypeId() { return documentTypeId; }
+    public void setDocumentTypeId(Long documentTypeId) { this.documentTypeId = documentTypeId; }
+
+    public String getSpecies() { return species; }
+    public void setSpecies(String species) { this.species = species; }
+
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
+
+    public String getLayoutRef() { return layoutRef; }
+    public void setLayoutRef(String layoutRef) { this.layoutRef = layoutRef; }
+
+    public Long getTemplateId() { return templateId; }
+    public void setTemplateId(Long templateId) { this.templateId = templateId; }
+
+    public String getTechnicalResponsible() { return technicalResponsible; }
+    public void setTechnicalResponsible(String technicalResponsible) { this.technicalResponsible = technicalResponsible; }
+
+    public LocalDate getPerformedDate() { return performedDate; }
+    public void setPerformedDate(LocalDate performedDate) { this.performedDate = performedDate; }
+
+    public LocalDate getDueDate() { return dueDate; }
+    public void setDueDate(LocalDate dueDate) { this.dueDate = dueDate; }
+
+    public String getCurrentLocation() { return currentLocation; }
+    public void setCurrentLocation(String currentLocation) { this.currentLocation = currentLocation; }
+
+    public String getRemarks() { return remarks; }
+    public void setRemarks(String remarks) { this.remarks = remarks; }
+
+    public String getUploadHash() { return uploadHash; }
+    public void setUploadHash(String uploadHash) { this.uploadHash = uploadHash; }
 
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }

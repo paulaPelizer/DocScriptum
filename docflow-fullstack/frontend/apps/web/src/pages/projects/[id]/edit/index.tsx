@@ -1,42 +1,67 @@
-import type React from "react"
+import type React from "react";
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ArrowLeft, Save, X, Plus, Trash2 } from "lucide-react";
+import { useNavigate, useLocation, useParams } from "react-router-dom";
+import AppHeader from "@/components/AppHeader";
+import { PageHeader } from "@/components/page-header";
+import { apiFetch } from "@/services/api";
+import type { Document, Disciplina, Milestone, User, ProjectData } from "@/types/project";
 
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
-import { ArrowLeft, Save, X, Plus, Trash2 } from "lucide-react"
-import { Link, useNavigate, useParams } from "react-router-dom"
-import AppHeader from "@/components/AppHeader"
-import { PageHeader } from "@/components/page-header"
-import type { Document, Disciplina, Milestone, User, ProjectData } from "@/types/project"
+/** Se o backend já devolver disciplinas/milestones, depois a gente mapeia aqui. */
+type ProjectApiDTO = {
+  id: number;
+  code?: string | null;
+  name: string;
+  description?: string | null;
+  status?: string | null;
+  startDate?: string | null;        // ISO ou "YYYY-MM-DD"
+  plannedEndDate?: string | null;   // ISO ou "YYYY-MM-DD"
+  clientId?: number | null;
+  clientName?: string | null;
+};
+
+function toDateInput(iso?: string | null) {
+  if (!iso) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(String(iso))) return String(iso);
+  const d = new Date(String(iso));
+  if (isNaN(d.getTime())) return "";
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
 
 export default function EditProjectPage() {
-  const navigate = useNavigate()
-  const params = useParams()
-  const [isLoading, setIsLoading] = useState(false)
+  const navigate = useNavigate();
+  const location = useLocation();
+  const from = (location.state as any)?.from as string | undefined;
 
-  // Dados básicos do projeto
+  const { id } = useParams();
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Dados básicos do projeto (mantendo seu ProjectData)
   const [projectData, setProjectData] = useState<ProjectData>({
     name: "",
     code: "",
     description: "",
-    client: "",
+    client: "",      // mantém string; depois podemos trocar para clientId se quiser
     status: "",
     startDate: "",
-    endDate: "",
-  })
+    endDate: "",     // mapeia plannedEndDate
+  });
 
-  // Disciplinas com documentos e destinatários
-  const [disciplinas, setDisciplinas] = useState<Disciplina[]>([])
+  // Disciplinas e marcos (mantidos conforme seu formulário atual)
+  const [disciplinas, setDisciplinas] = useState<Disciplina[]>([]);
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
 
-  // Marcos contratuais
-  const [milestones, setMilestones] = useState<Milestone[]>([])
-
-  // Usuários disponíveis por grupo
+  // Usuários disponíveis por grupo (mock local por enquanto)
   const [userGroups] = useState<Record<string, User[]>>({
     cliente: [
       { id: 1, name: "João Silva", email: "joao@empresaabc.com" },
@@ -53,206 +78,207 @@ export default function EditProjectPage() {
       { id: 8, name: "Sandra Costa", email: "sandra@docflow.com" },
       { id: 9, name: "Felipe Santos", email: "felipe@docflow.com" },
     ],
-  })
+  });
 
-  useEffect(() => {
-    // Simular carregamento dos dados do projeto
-    const loadProjectData = async () => {
-      const mockProject: ProjectData = {
-        name: "Projeto Alpha",
-        code: "PROJ-2025-001",
-        description: "Expansão da sede principal com novas instalações administrativas e técnicas.",
-        client: "empresa-abc",
-        status: "em-andamento",
-        startDate: "2025-03-01",
-        endDate: "2025-09-30",
-      }
-
-      const mockDisciplinas: Disciplina[] = [
-        {
-          id: 1,
-          name: "Civil",
-          documents: [
-            { id: 1, name: "Plantas Baixas", dueDate: "2025-04-15" },
-            { id: 2, name: "Memorial Descritivo Civil", dueDate: "2025-04-20" },
-          ],
-          destinatarios: {
-            cliente: [1, 2],
-            fornecedor: [4],
-            interno: [7, 8],
-          },
-        },
-        {
-          id: 2,
-          name: "Elétrica",
-          documents: [
-            { id: 3, name: "Projeto Elétrico - Baixa Tensão", dueDate: "2025-05-10" },
-            { id: 4, name: "Memorial Descritivo Elétrico", dueDate: "2025-05-15" },
-          ],
-          destinatarios: {
-            cliente: [1],
-            fornecedor: [4, 5],
-            interno: [7],
-          },
-        },
-      ]
-
-      const mockMilestones: Milestone[] = [
-        {
-          id: 1,
-          name: "Entrega Inicial",
-          description: "Documentação básica do projeto",
-          dueDate: "2025-04-30",
-        },
-        {
-          id: 2,
-          name: "Projetos Complementares",
-          description: "Projetos estruturais, hidráulicos e elétricos",
-          dueDate: "2025-06-30",
-        },
-      ]
-
-      setProjectData(mockProject)
-      setDisciplinas(mockDisciplinas)
-      setMilestones(mockMilestones)
+  /** 🔙 Botão Voltar inteligente */
+  const goBack = () => {
+    if (from) {
+      navigate(from, { replace: true });
+    } else if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate("/projects");
     }
+  };
 
-    loadProjectData()
-  }, [params.id])
+  /** 🔄 CARREGAR DO BACKEND */
+  useEffect(() => {
+    if (!id) return;
+    let cancel = false;
 
+    (async () => {
+      setIsLoading(true);
+      try {
+        const api: ProjectApiDTO & { milestones?: Milestone[]; documents?: any[] } =
+          await apiFetch(`/projects/${id}/detail`);
+        if (cancel) return;
+
+        setProjectData({
+          name: api.name ?? "",
+          code: api.code ?? "",
+          description: api.description ?? "",
+          client: api.clientName ?? "",        // ou clientId se preferir id
+          status: api.status ?? "",
+          startDate: toDateInput(api.startDate),
+          endDate: toDateInput(api.plannedEndDate),
+        });
+
+        if (api.milestones) setMilestones(api.milestones);
+
+        if (api.documents) {
+          const docsApi = Array.isArray(api.documents) ? api.documents : [];
+          const disciplinasUnicas: string[] = Array.from(
+            new Set(docsApi.map((d: any) => d?.type ?? "Sem Disciplina"))
+          );
+
+          setDisciplinas(
+            disciplinasUnicas.map((nome: string, idx: number) => ({
+              id: idx + 1,
+              name: nome,
+              documents: docsApi
+                .filter((d: any) => (d?.type ?? "Sem Disciplina") === nome)
+                .map((doc: any) => ({
+                  id: doc?.id ?? Number(`${idx + 1}${Math.random().toString().slice(2, 6)}`),
+                  name: doc?.title ?? doc?.code ?? "(sem título)",
+                  dueDate: toDateInput(doc?.lastModified ?? null),
+                })),
+              destinatarios: { cliente: [], fornecedor: [], interno: [] },
+            }))
+          );
+        }
+      } catch (e) {
+        console.error("Erro ao carregar projeto detail:", e);
+        alert("Não foi possível carregar os dados do projeto.");
+      } finally {
+        if (!cancel) setIsLoading(false);
+      }
+    })();
+
+    return () => {
+      cancel = true;
+    };
+  }, [id]);
+
+  /** 💾 SALVAR NO BACKEND */
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+    e.preventDefault();
+    setIsLoading(true);
 
     try {
-      const updatedProject = {
-        ...projectData,
-        disciplinas,
-        milestones,
-        updatedAt: new Date().toISOString(),
-      }
+      const payload = {
+        code: projectData.code?.trim() || "",
+        name: projectData.name?.trim() || "",
+        description: projectData.description?.trim() || "",
+        status: projectData.status?.trim() || "",
+        startDate: projectData.startDate?.trim() || null,      // "YYYY-MM-DD"
+        plannedEndDate: projectData.endDate?.trim() || null,   // "YYYY-MM-DD"
+      };
 
-      console.log("Atualizando projeto:", updatedProject)
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      if (!payload.name) throw new Error("Informe o nome do projeto.");
 
-      navigate(`/projects/${params.id}`)
-    } catch (error) {
-      console.error("Erro ao atualizar projeto:", error)
-      alert("Erro ao atualizar projeto. Tente novamente.")
+      await apiFetch(`/projects/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      // após salvar, volte para a origem (se houver) ou para a página de detalhes
+      if (from) navigate(from, { replace: true });
+      else navigate(`/projects/${id}`);
+    } catch (error: any) {
+      console.error("Erro ao atualizar projeto:", error);
+      alert(error?.message || "Erro ao atualizar projeto. Tente novamente.");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const updateProjectData = (field: keyof ProjectData, value: string) => {
-    setProjectData((prev) => ({ ...prev, [field]: value }))
-  }
+    setProjectData((prev) => ({ ...prev, [field]: value }));
+  };
 
-  // Disciplinas
+  // ---------- Disciplinas ----------
   const addDisciplina = () => {
     const newDisciplina: Disciplina = {
       id: Date.now(),
       name: "",
       documents: [],
       destinatarios: { cliente: [], fornecedor: [], interno: [] },
-    }
-    setDisciplinas([...disciplinas, newDisciplina])
-  }
+    };
+    setDisciplinas((d) => [...d, newDisciplina]);
+  };
 
   const removeDisciplina = (id: number) => {
-    setDisciplinas(disciplinas.filter((d) => d.id !== id))
-  }
+    setDisciplinas((d) => d.filter((x) => x.id !== id));
+  };
 
   const updateDisciplina = (id: number, field: keyof Disciplina, value: any) => {
-    setDisciplinas(disciplinas.map((d) => (d.id === id ? { ...d, [field]: value } : d)))
-  }
+    setDisciplinas((d) => d.map((x) => (x.id === id ? { ...x, [field]: value } : x)));
+  };
 
-  // Documentos
+  // ---------- Documentos ----------
   const addDocument = (disciplinaId: number) => {
-    setDisciplinas(
-      disciplinas.map((d) => {
-        if (d.id === disciplinaId) {
-          const newDoc: Document = { id: Date.now(), name: "", dueDate: "" }
-          return { ...d, documents: [...d.documents, newDoc] }
-        }
-        return d
-      }),
-    )
-  }
+    setDisciplinas((d) =>
+      d.map((disc) =>
+        disc.id === disciplinaId
+          ? { ...disc, documents: [...disc.documents, { id: Date.now(), name: "", dueDate: "" }] }
+          : disc
+      )
+    );
+  };
 
   const removeDocument = (disciplinaId: number, docId: number) => {
-    setDisciplinas(
-      disciplinas.map((d) => {
-        if (d.id === disciplinaId) {
-          return { ...d, documents: d.documents.filter((doc) => doc.id !== docId) }
-        }
-        return d
-      }),
-    )
-  }
+    setDisciplinas((d) =>
+      d.map((disc) =>
+        disc.id === disciplinaId ? { ...disc, documents: disc.documents.filter((doc) => doc.id !== docId) } : disc
+      )
+    );
+  };
 
   const updateDocument = (disciplinaId: number, docId: number, field: keyof Document, value: string) => {
-    setDisciplinas(
-      disciplinas.map((d) => {
-        if (d.id === disciplinaId) {
-          return {
-            ...d,
-            documents: d.documents.map((doc) => (doc.id === docId ? { ...doc, [field]: value } : doc)),
-          }
-        }
-        return d
-      }),
-    )
-  }
+    setDisciplinas((d) =>
+      d.map((disc) =>
+        disc.id === disciplinaId
+          ? {
+              ...disc,
+              documents: disc.documents.map((doc) => (doc.id === docId ? { ...doc, [field]: value } : doc)),
+            }
+          : disc
+      )
+    );
+  };
 
-  // Destinatários
-  const toggleDestinatario = (disciplinaId: number, groupType: keyof Disciplina["destinatarios"], userId: number) => {
-    setDisciplinas(
-      disciplinas.map((d) => {
-        if (d.id === disciplinaId) {
-          const currentGroup = d.destinatarios[groupType] || []
-          const newGroup = currentGroup.includes(userId)
-            ? currentGroup.filter((id) => id !== userId)
-            : [...currentGroup, userId]
+  // ---------- Destinatários ----------
+  const toggleDestinatario = (
+    disciplinaId: number,
+    groupType: keyof Disciplina["destinatarios"],
+    userId: number
+  ) => {
+    setDisciplinas((d) =>
+      d.map((disc) => {
+        if (disc.id !== disciplinaId) return disc;
+        const current = disc.destinatarios[groupType] || [];
+        const next = current.includes(userId) ? current.filter((x) => x !== userId) : [...current, userId];
+        return { ...disc, destinatarios: { ...disc.destinatarios, [groupType]: next } };
+      })
+    );
+  };
 
-          return {
-            ...d,
-            destinatarios: { ...d.destinatarios, [groupType]: newGroup },
-          }
-        }
-        return d
-      }),
-    )
-  }
-
-  // Milestones
+  // ---------- Milestones ----------
   const addMilestone = () => {
-    const newMilestone: Milestone = { id: Date.now(), name: "", description: "", dueDate: "" }
-    setMilestones([...milestones, newMilestone])
-  }
+    setMilestones((m) => [...m, { id: Date.now(), name: "", description: "", dueDate: "" }]);
+  };
 
   const removeMilestone = (id: number) => {
-    setMilestones(milestones.filter((m) => m.id !== id))
-  }
+    setMilestones((m) => m.filter((x) => x.id !== id));
+  };
 
   const updateMilestone = (id: number, field: keyof Milestone, value: string) => {
-    setMilestones(milestones.map((m) => (m.id === id ? { ...m, [field]: value } : m)))
-  }
+    setMilestones((m) => m.map((x) => (x.id === id ? { ...x, [field]: value } : x)));
+  };
 
+  // ---------- Render ----------
   return (
     <div className="flex min-h-screen flex-col">
-      {/* Cabeçalho unificado com vidro/blur e logo/menu */}
       <AppHeader />
 
       <main className="flex-1 p-4 md:p-6">
         <div className="container mx-auto max-w-6xl">
           <PageHeader title="Editar Projeto" description="Altere as informações do projeto">
-            <Link to={`/projects/${params.id}`}>
-              <Button variant="outline">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Voltar
-              </Button>
-            </Link>
+            <Button variant="outline" type="button" onClick={goBack}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Voltar
+            </Button>
           </PageHeader>
 
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -282,6 +308,7 @@ export default function EditProjectPage() {
                     />
                   </div>
                 </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="description">Descrição</Label>
                   <Textarea
@@ -291,18 +318,18 @@ export default function EditProjectPage() {
                     onChange={(e) => updateProjectData("description", e.target.value)}
                   />
                 </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="client">Cliente *</Label>
                     <Select
                       value={projectData.client}
-                      onValueChange={(value) => updateProjectData("client", value)}
+                      onValueChange={(v) => updateProjectData("client", v)}
                       required
                     >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
+                        {/* TODO: popular via GET /clients depois */}
                         <SelectItem value="empresa-abc">Empresa ABC</SelectItem>
                         <SelectItem value="construtora-xyz">Construtora XYZ</SelectItem>
                         <SelectItem value="industria-123">Indústria 123</SelectItem>
@@ -312,10 +339,8 @@ export default function EditProjectPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="status">Status</Label>
-                    <Select value={projectData.status} onValueChange={(value) => updateProjectData("status", value)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
+                    <Select value={projectData.status} onValueChange={(v) => updateProjectData("status", v)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="planejamento">Planejamento</SelectItem>
                         <SelectItem value="em-andamento">Em Andamento</SelectItem>
@@ -326,6 +351,7 @@ export default function EditProjectPage() {
                     </Select>
                   </div>
                 </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="start-date">Data de Início</Label>
@@ -355,9 +381,7 @@ export default function EditProjectPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle>Disciplinas e Documentos</CardTitle>
-                    <CardDescription>
-                      Configure as disciplinas do projeto, seus documentos e destinatários
-                    </CardDescription>
+                    <CardDescription>Configure as disciplinas do projeto, seus documentos e destinatários</CardDescription>
                   </div>
                   <Button type="button" onClick={addDisciplina} variant="outline" size="sm">
                     <Plus className="mr-2 h-4 w-4" />
@@ -379,14 +403,12 @@ export default function EditProjectPage() {
 
                     {/* Nome da Disciplina */}
                     <div className="space-y-2">
-                      <Label htmlFor={`disciplina-name-${disciplina.id}`}>Nome da Disciplina</Label>
+                      <Label>Nome da Disciplina</Label>
                       <Select
                         value={disciplina.name}
-                        onValueChange={(value) => updateDisciplina(disciplina.id, "name", value)}
+                        onValueChange={(v) => updateDisciplina(disciplina.id, "name", v)}
                       >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione a disciplina" />
-                        </SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder="Selecione a disciplina" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Civil">Civil</SelectItem>
                           <SelectItem value="Elétrica">Elétrica</SelectItem>
@@ -460,14 +482,11 @@ export default function EditProjectPage() {
                                       toggleDestinatario(
                                         disciplina.id,
                                         groupType as keyof Disciplina["destinatarios"],
-                                        user.id,
+                                        user.id
                                       )
                                     }
                                   />
-                                  <Label
-                                    htmlFor={`disciplina-${disciplina.id}-${groupType}-${user.id}`}
-                                    className="text-xs"
-                                  >
+                                  <Label htmlFor={`disciplina-${disciplina.id}-${groupType}-${user.id}`} className="text-xs">
                                     {user.name}
                                     <br />
                                     <span className="text-muted-foreground">{user.email}</span>
@@ -511,18 +530,16 @@ export default function EditProjectPage() {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor={`milestone-name-${milestone.id}`}>Nome do Marco</Label>
+                        <Label>Nome do Marco</Label>
                         <Input
-                          id={`milestone-name-${milestone.id}`}
                           placeholder="Ex: Entrega Inicial"
                           value={milestone.name}
                           onChange={(e) => updateMilestone(milestone.id, "name", e.target.value)}
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor={`milestone-date-${milestone.id}`}>Data Limite</Label>
+                        <Label>Data Limite</Label>
                         <Input
-                          id={`milestone-date-${milestone.id}`}
                           type="date"
                           value={milestone.dueDate}
                           onChange={(e) => updateMilestone(milestone.id, "dueDate", e.target.value)}
@@ -530,9 +547,8 @@ export default function EditProjectPage() {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor={`milestone-desc-${milestone.id}`}>Descrição</Label>
+                      <Label>Descrição</Label>
                       <Textarea
-                        id={`milestone-desc-${milestone.id}`}
                         placeholder="Descreva os documentos e requisitos deste marco..."
                         value={milestone.description}
                         onChange={(e) => updateMilestone(milestone.id, "description", e.target.value)}
@@ -546,11 +562,9 @@ export default function EditProjectPage() {
 
             {/* Botões de Ação */}
             <div className="flex justify-end gap-4">
-              <Link to={`/projects/${params.id}`}>
-                <Button variant="outline" type="button">
-                  Cancelar
-                </Button>
-              </Link>
+              <Button variant="outline" type="button" onClick={goBack}>
+                Cancelar
+              </Button>
               <Button type="submit" disabled={isLoading} className="neon-border">
                 {isLoading ? (
                   "Salvando Alterações..."
@@ -566,5 +580,5 @@ export default function EditProjectPage() {
         </div>
       </main>
     </div>
-  )
+  );
 }

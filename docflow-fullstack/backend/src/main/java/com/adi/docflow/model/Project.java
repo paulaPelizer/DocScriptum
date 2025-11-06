@@ -38,6 +38,19 @@ public class Project {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
+    @Column(length = 20)
+    private String priority;
+    
+    @Column(columnDefinition = "TEXT")
+    private String notes;
+    
+    @Column(name = "status_secondary", length = 50)
+    private String statusSecondary;
+    
+    @Column(name = "status_history", columnDefinition = "json")
+    private String statusHistory;
+
+
     // relacionamentos auxiliares (opcional manter lado inverso aqui)
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProjectDiscipline> disciplines;

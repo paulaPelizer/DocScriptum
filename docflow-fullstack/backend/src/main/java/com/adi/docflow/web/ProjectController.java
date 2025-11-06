@@ -6,28 +6,33 @@ import com.adi.docflow.model.Project;
 import com.adi.docflow.model.ProjectDiscipline;
 import com.adi.docflow.model.ProjectDisciplineDocType;
 import com.adi.docflow.model.ProjectMilestone;
+
 import com.adi.docflow.repository.DocumentRepository;
 import com.adi.docflow.repository.OrganizationRepository;
 import com.adi.docflow.repository.ProjectRepository;
 import com.adi.docflow.repository.ProjectDisciplineRepository;
 import com.adi.docflow.repository.ProjectDisciplineDocTypeRepository;
 import com.adi.docflow.repository.ProjectMilestoneRepository;
+
 import com.adi.docflow.web.dto.CreateProjectDTO;
 import com.adi.docflow.web.dto.OrganizationDTO;
 import com.adi.docflow.web.dto.ProjectDTO;
 import com.adi.docflow.web.dto.ProjectListItemDTO;
-
-// ✅ novos imports
 import com.adi.docflow.web.dto.ProjectDetailDTO;
+
 import com.adi.docflow.service.ProjectService;
 
+import jakarta.annotation.security.PermitAll;
 import jakarta.transaction.Transactional;
+
 import org.springdoc.core.annotations.ParameterObject;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -38,6 +43,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -46,19 +52,15 @@ import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 @RestController
 @RequestMapping("/api/v1/projects")
+@CrossOrigin(origins = { "http://localhost:5173", "http://127.0.0.1:5173" }, allowCredentials = "true")
 public class ProjectController {
 
     private final ProjectRepository projectRepo;
     private final OrganizationRepository orgRepo;
-
     private final ProjectDisciplineRepository projDiscRepo;
     private final ProjectDisciplineDocTypeRepository projDiscDocTypeRepo;
     private final ProjectMilestoneRepository milestoneRepo;
-
-    // NEW: para gerar documentos “placeholder”
     private final DocumentRepository docRepo;
-
-    // ✅ service para montar o detalhe completo
     private final ProjectService projectService;
 
     public ProjectController(
@@ -108,7 +110,6 @@ public class ProjectController {
 
     private ProjectDTO toDTO(Project p) {
         if (p == null) return null;
-        // ✅ incluir status como 4º argumento do record ProjectDTO
         return new ProjectDTO(
                 p.getId(),
                 p.getCode(),
@@ -120,6 +121,8 @@ public class ProjectController {
 
     // ---------- ENDPOINTS ----------
 
+    /** DEV: liberar criação sem JWT para depuração de 403 */
+    @PermitAll
     @PostMapping
     @Transactional
     public ResponseEntity<ProjectDTO> create(@RequestBody CreateProjectDTO dto) {
@@ -144,10 +147,8 @@ public class ProjectController {
             p.setClient(client);
         }
 
-        // ✅ record -> usar dto.description() (não getDescription)
-        p.setDescription(dto.description());
-
-        p.setStatus(dto.statusInicial()); // pode ser null
+        p.setDescription(dto.description()); // OK para record
+        p.setStatus(dto.statusInicial());    // pode ser null
         p.setStartDate(parseDateOrNull(dto.dataInicio()));
         p.setPlannedEndDate(parseDateOrNull(dto.dataPrevistaConclusao()));
         p.setUpdatedAt(Instant.now());
@@ -155,44 +156,53 @@ public class ProjectController {
         // salva projeto para obter ID
         Project saved = projectRepo.save(p);
 
-        // disciplinas + tipos (opcionais) + PLACEHOLDERS de documentos
+        // ================== DISCIPLINAS (tolerante a DTO leve/rico) ==================
         if (dto.disciplinas() != null && !dto.disciplinas().isEmpty()) {
             for (var d : dto.disciplinas()) {
                 if (d == null) continue;
 
+                // tenta ler por vários nomes de métodos (record/POJO/versão antiga)
+                Long disciplinaId      = tryLong(d, "disciplinaId", "id", "getDisciplinaId", "getId");
+                String disciplinaNome  = tryString(d, "disciplinaNome", "name", "getDisciplinaNome", "getName");
+                Boolean destCliente    = tryBool(d, "destinatarioCliente", "getDestinatarioCliente");
+                Boolean destInterno    = tryBool(d, "destinatarioInterno", "getDestinatarioInterno");
+
                 ProjectDiscipline pd = new ProjectDiscipline();
                 pd.setProject(saved);
-                pd.setDisciplinaId(d.disciplinaId());
-                pd.setDisciplinaNome(d.disciplinaNome());
-                pd.setDestinatarioCliente(d.destinatarioCliente());
-                pd.setDestinatarioInterno(d.destinatarioInterno());
+                pd.setDisciplinaId(disciplinaId);
+                pd.setDisciplinaNome(disciplinaNome);
+                pd.setDestinatarioCliente(destCliente);
+                pd.setDestinatarioInterno(destInterno);
                 pd = projDiscRepo.save(pd);
 
-                if (d.tipos() != null && !d.tipos().isEmpty()) {
-                    for (var t : d.tipos()) {
-                        if (t == null || t.tipo() == null || t.tipo().isBlank()) continue;
+                // Tipos/quantidades (se existirem no DTO)
+                List<?> tipos = tryList(d, "tipos", "getTipos");
+                if (tipos != null && !tipos.isEmpty()) {
+                    for (Object t : tipos) {
+                        if (t == null) continue;
 
-                        final String tipo = t.tipo().trim();
-                        final int quantidade = (t.quantidade() == null ? 0 : t.quantidade());
+                        String tipo = tryString(t, "tipo", "getTipo");
+                        Integer quantidade = tryInt(t, "quantidade", "getQuantidade");
+                        if (tipo == null || tipo.isBlank()) continue;
+
+                        final int qtd = (quantidade == null ? 0 : quantidade);
 
                         ProjectDisciplineDocType dt = new ProjectDisciplineDocType();
                         dt.setProjectDiscipline(pd);
-                        dt.setDocType(tipo);
-                        dt.setQuantity(quantidade);
+                        dt.setDocType(tipo.trim());
+                        dt.setQuantity(qtd);
                         projDiscDocTypeRepo.save(dt);
 
-                        // ---- gerar N placeholders na tabela app.document
-                        if (quantidade > 0) {
-                            String prefix = slug(tipo); // ex.: "Plantas Baixas" -> "PLANTAS-BAIXAS"
-                            List<Document> slots = new ArrayList<>(quantidade);
-                            for (int i = 1; i <= quantidade; i++) {
+                        // gerar N placeholders na tabela app.document
+                        if (qtd > 0) {
+                            String prefix = slug(tipo);
+                            List<Document> slots = new ArrayList<>(qtd);
+                            for (int i = 1; i <= qtd; i++) {
                                 Document doc = new Document();
                                 doc.setProject(saved);
-                                doc.setTitle(tipo);           // o nome do tipo como título
+                                doc.setTitle(tipo);           // nome do tipo como título
                                 doc.setCode(String.format("%s-%03d", prefix, i));
                                 doc.setRevision("1");
-                                // Se sua entidade Document tiver setter de status, descomente:
-                                // doc.setStatus("PLANNED");
                                 doc.setFormat(null);
                                 doc.setPages(null);
                                 doc.setFileUrl(null);
@@ -204,6 +214,7 @@ public class ProjectController {
                 }
             }
         }
+        // ============================================================================
 
         // marcos contratuais (opcionais)
         if (dto.marcos() != null && !dto.marcos().isEmpty()) {
@@ -232,7 +243,7 @@ public class ProjectController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    // ✅ NOVO: detalhe completo (dados + marcos + documentos)
+    /** Detalhe completo (dados + marcos + documentos) */
     @GetMapping("/{id}/detail")
     @Transactional(Transactional.TxType.SUPPORTS)
     public ResponseEntity<ProjectDetailDTO> getDetail(@PathVariable("id") Long id) {
@@ -278,5 +289,56 @@ public class ProjectController {
             List<ProjectListItemDTO> slice = (start >= items.size()) ? List.of() : items.subList(start, end);
             return new PageImpl<>(slice, pageable, items.size());
         }
+    }
+
+    /* ==================== HELPERS REFLEXIVOS TOLERANTES ==================== */
+
+    private static String tryString(Object obj, String... methodNames) {
+        for (String m : methodNames) {
+            try { var mm = obj.getClass().getMethod(m); var v = mm.invoke(obj); return v == null ? null : v.toString(); }
+            catch (Exception ignored) {}
+        }
+        return null;
+    }
+    private static Long tryLong(Object obj, String... methodNames) {
+        for (String m : methodNames) {
+            try {
+                var mm = obj.getClass().getMethod(m); Object v = mm.invoke(obj);
+                if (v instanceof Number n) return n.longValue();
+                if (v instanceof String s && !s.isBlank()) return Long.parseLong(s);
+            } catch (Exception ignored) {}
+        }
+        return null;
+    }
+    private static Integer tryInt(Object obj, String... methodNames) {
+        for (String m : methodNames) {
+            try {
+                var mm = obj.getClass().getMethod(m); Object v = mm.invoke(obj);
+                if (v instanceof Number n) return n.intValue();
+                if (v instanceof String s && !s.isBlank()) return Integer.parseInt(s);
+            } catch (Exception ignored) {}
+        }
+        return null;
+    }
+    @SuppressWarnings("unchecked")
+    private static List<?> tryList(Object obj, String... methodNames) {
+        for (String m : methodNames) {
+            try {
+                var mm = obj.getClass().getMethod(m); Object v = mm.invoke(obj);
+                if (v instanceof List<?> list) return list;
+            } catch (Exception ignored) {}
+        }
+        return null;
+    }
+    private static Boolean tryBool(Object obj, String... methodNames) {
+        for (String m : methodNames) {
+            try {
+                var mm = obj.getClass().getMethod(m); Object v = mm.invoke(obj);
+                if (v instanceof Boolean b) return b;
+                if (v instanceof String s) return Boolean.parseBoolean(s);
+                if (v instanceof Number n) return n.intValue() != 0;
+            } catch (Exception ignored) {}
+        }
+        return null;
     }
 }

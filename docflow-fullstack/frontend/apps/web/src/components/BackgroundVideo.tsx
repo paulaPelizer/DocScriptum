@@ -1,4 +1,4 @@
-import React from "react"
+/*import React from "react"
 import { useThemeStyle } from "@/components/theme-style-provider"
 
 const VIDEO_ID_A = "-tTglFYF1wo" // vídeo 1 (perfeito)
@@ -48,4 +48,59 @@ export default function BackgroundVideo() {
       />
     </div>
   )
+}*/
+
+// src/components/BackgroundVideo.tsx
+import { useEffect, useRef } from "react";
+import { useThemeStyle } from "@/components/theme-style-provider";
+
+export default function BackgroundVideo() {
+  const { bgVariant } = useThemeStyle();
+  const ref = useRef<HTMLVideoElement | null>(null);
+
+  const srcBase =
+    bgVariant === "alt" ? "/videos/-tTglFYF1wo" : "/videos/najDdw22zH8";
+
+  // garantir autoplay após troca do source (iOS/Safari exigem muted+playsInline)
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const tryPlay = async () => {
+      try { await el.play(); } catch { /* ignore */ }
+    };
+    tryPlay();
+  }, [srcBase]);
+
+  return (
+    <div
+      aria-hidden
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 0,              // atrás do app (seu wrapper tem z-10)
+        pointerEvents: "none",
+        overflow: "hidden",
+      }}
+    >
+      <video
+        key={srcBase}           // força recarregar ao mudar variante
+        ref={ref}
+        className="h-full w-full object-cover"
+        autoPlay
+        loop
+        muted
+        playsInline
+        preload="auto"
+        poster="/videos/bg-poster.jpg"  // opcional
+      >
+        {/* WebM primeiro (se tiver), depois MP4 */}
+        <source src={`${srcBase}.webm`} type="video/webm" />
+        <source src={`${srcBase}.mp4`} type="video/mp4" />
+      </video>
+
+      {/* overlay para contraste do conteúdo */}
+      <div className="absolute inset-0 bg-black/30 dark:bg-black/40" />
+    </div>
+  );
 }
+

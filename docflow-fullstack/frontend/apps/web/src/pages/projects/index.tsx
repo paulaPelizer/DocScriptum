@@ -13,8 +13,11 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu";
-import { FolderKanban, MoreHorizontal, Plus, Search, Users, Edit } from "lucide-react";
+import { FolderKanban, MoreHorizontal, Plus, Search, Users, Edit, Filter as FilterIcon, X } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import AppHeader from "@/components/AppHeader";
 
@@ -70,6 +73,17 @@ function norm(s: string | null | undefined) {
     .trim();
 }
 
+/** === Opções de filtro (campos) === */
+const FILTER_OPTIONS = [
+  { key: "nome", label: "Nome" },
+  { key: "cliente", label: "Cliente" },
+  { key: "documentos", label: "Documentos" },
+  { key: "status", label: "Status" },
+  { key: "ultimaAtualizacao", label: "Última atualização" },
+  { key: "id", label: "ID" },
+] as const;
+type FilterKey = typeof FILTER_OPTIONS[number]["key"];
+
 export default function ProjectsPage() {
   const navigate = useNavigate();
   const [selectedProjects, setSelectedProjects] = useState<number[]>([]);
@@ -79,6 +93,10 @@ export default function ProjectsPage() {
 
   // busca local
   const [q, setQ] = useState<string>("");
+
+  // filtros: múltipla seleção (mantém menu aberto ao marcar)
+  const ALL_FIELDS = FILTER_OPTIONS.map(o => o.key) as FilterKey[];
+  const [selectedFields, setSelectedFields] = useState<FilterKey[]>(ALL_FIELDS);
 
   // paginação (carregamos mais itens para a busca local ficar boa)
   const [page] = useState<number>(0);
@@ -96,7 +114,6 @@ export default function ProjectsPage() {
         params.set("size", String(size));
         if (status) params.set("status", status);
 
-        // IMPORTANTE: passar só o path para o wrapper (ele resolve a base)
         const json = await apiGet<PageResp<ProjectListItem>>(
           `/projects/table?${params.toString()}`
         );
@@ -104,7 +121,6 @@ export default function ProjectsPage() {
         if (!abort) setData(json);
       } catch (e: any) {
         const msg = String(e?.message || "Erro desconhecido");
-        // se for 401/403, o wrapper já redirecionou
         if (!abort && !msg.toLowerCase().includes("não autorizado")) setErrMsg(msg);
       } finally {
         if (!abort) setLoading(false);
@@ -118,25 +134,33 @@ export default function ProjectsPage() {
 
   const projects = useMemo(() => data?.content ?? [], [data]);
 
-  /** lista filtrada em tempo real (nome/cliente/status/id) */
+  /** pega o valor textual de um campo para comparar na busca */
+  const fieldValue = (p: ProjectListItem, key: FilterKey): string => {
+    switch (key) {
+      case "nome": return norm(p.nome);
+      case "cliente": return norm(p.cliente);
+      case "documentos": return String(p.documentos ?? "");
+      case "status": return norm(p.status);
+      case "ultimaAtualizacao": {
+        // busca por data: permite bater com data local "dd/mm/aaaa" ou relativo "há 2 dias"
+        const local = p.ultimaAtualizacao ? new Date(p.ultimaAtualizacao).toLocaleDateString() : "";
+        return norm(local) + " " + norm(formatRelative(p.ultimaAtualizacao));
+      }
+      case "id": return String(p.id ?? "");
+    }
+  };
+
+  /** lista filtrada em tempo real conforme campos selecionados */
   const filtered = useMemo(() => {
     const nq = norm(q);
     if (!nq) return projects;
-    return projects.filter((p) => {
-      const nNome = norm(p.nome);
-      const nCliente = norm(p.cliente);
-      const nStatus = norm(p.status);
-      const nId = String(p.id);
-      return (
-        nNome.includes(nq) ||
-        nCliente.includes(nq) ||
-        nStatus.includes(nq) ||
-        nId.includes(nq)
-      );
-    });
-  }, [projects, q]);
+    const fields = selectedFields.length ? selectedFields : ALL_FIELDS;
+    return projects.filter((p) =>
+      fields.some((f) => fieldValue(p, f).includes(nq))
+    );
+  }, [projects, q, selectedFields]);
 
-  // ao mudar o filtro, readequar seleção
+  // ao mudar a lista/filtragem, ajustar seleção
   useEffect(() => {
     setSelectedProjects((prev) => prev.filter((id) => filtered.some((p) => p.id === id)));
   }, [filtered]);
@@ -164,6 +188,19 @@ export default function ProjectsPage() {
     return "outline" as const;
   };
 
+  // helpers filtro
+  const toggleField = (key: FilterKey, checked: boolean) => {
+    setSelectedFields((prev) => {
+      if (checked) {
+        if (prev.includes(key)) return prev;
+        return [...prev, key];
+      }
+      return prev.filter((k) => k !== key);
+    });
+  };
+  const clearAll = () => setSelectedFields([]);
+  const selectAll = () => setSelectedFields(ALL_FIELDS);
+
   return (
     <div className="flex min-h-screen flex-col">
       <AppHeader />
@@ -177,11 +214,59 @@ export default function ProjectsPage() {
                 <Input
                   type="search"
                   placeholder="Buscar projetos..."
-                  className="w-full md:w-[250px] pl-8"
+                  className="w-full md:w-[260px] pl-8 pr-8"
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
                 />
+                {q && (
+                  <button
+                    type="button"
+                    onClick={() => setQ("")}
+                    className="absolute right-2.5 top-2.5 p-0.5 rounded hover:bg-muted"
+                    aria-label="Limpar busca"
+                  >
+                    <X className="h-4 w-4 text-muted-foreground" />
+                  </button>
+                )}
               </div>
+
+              {/* Filtros (múltipla seleção; mantém aberto ao marcar) */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="whitespace-nowrap">
+                    <FilterIcon className="mr-2 h-4 w-4" />
+                    Filtros
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64">
+                  <DropdownMenuLabel>Filtros</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {FILTER_OPTIONS.map((opt) => (
+                    <DropdownMenuCheckboxItem
+                      key={opt.key}
+                      checked={selectedFields.includes(opt.key)}
+                      onSelect={(e) => e.preventDefault()} // não fecha ao marcar
+                      onCheckedChange={(c) => toggleField(opt.key, Boolean(c))}
+                    >
+                      {opt.label}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                  <DropdownMenuSeparator />
+                  <div className="px-2 py-1.5 flex items-center justify-between gap-2">
+                    <Button variant="ghost" size="sm" onClick={clearAll}>
+                      Limpar
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={selectAll}
+                      disabled={selectedFields.length === ALL_FIELDS.length}
+                    >
+                      Selecionar tudo
+                    </Button>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
               {selectedProjects.length > 0 && (
                 <Button onClick={handleEditSelected} variant="outline">

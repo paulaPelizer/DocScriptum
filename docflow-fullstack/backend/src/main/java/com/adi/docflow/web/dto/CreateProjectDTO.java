@@ -19,6 +19,6 @@ public record CreateProjectDTO(
     // se você preferir, aceite também "descricao":
     // private String descricao;
 
-    List<DisciplinaInput> disciplinas,
+    List<DisciplineDTO> disciplinas,
     List<MarcoContratualInput> marcos
 ) {}

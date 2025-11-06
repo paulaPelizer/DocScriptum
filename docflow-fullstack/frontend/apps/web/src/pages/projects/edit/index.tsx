@@ -1,4 +1,3 @@
-// frontend/apps/web/src/pages/projects/edit/index.tsx
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -11,13 +10,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Save } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import AppHeader from "@/components/AppHeader";
+import { apiGet } from "@/services/api"; // ✅ usa wrapper com token
 
 const API_BASE = (import.meta as any).env?.VITE_API_URL ?? "http://localhost:8080";
 
 type ProjectMinimal = {
   id: number;
   name: string;
-  client?: string | null;
+  clientName?: string | null;   // ✅ sempre string (normalizada) para render
   status?: string | null;
   priority?: string | null;
   description?: string | null;
@@ -50,44 +50,44 @@ export default function EditMultipleProjectsPage(): JSX.Element {
       if (ids.length === 0) return;
       setIsLoading(true);
       try {
-        // 1) Tenta endpoint batch: GET /projects?ids=1,2,3
-        const qs = encodeURIComponent(ids.join(","));
-        const tryBatch = await fetch(`${API_BASE}/projects?ids=${qs}`);
-        if (tryBatch.ok) {
-          const data = await tryBatch.json();
-          if (!ignore) {
-            setSelectedProjects(
-              (Array.isArray(data) ? data : []).map((p) => ({
+        // ✅ tenta batch com apiGet (com token)
+        const qs = ids.join(","); // "1,2,3"
+        let loaded: any[] | null = null;
+
+        try {
+          const data = await apiGet<any[]>(`/projects?ids=${qs}`);
+          if (Array.isArray(data)) loaded = data;
+        } catch {
+          // se o endpoint batch não existir/der 404, cai no fallback
+        }
+
+        if (!loaded) {
+          // ✅ fallback individual usando apiGet
+          const results = await Promise.all(ids.map((id) => apiGet<any>(`/projects/${id}`)));
+          loaded = results;
+        }
+
+        if (!ignore) {
+          setSelectedProjects(
+            loaded.map((p) => {
+              // normaliza cliente para string
+              const clientName =
+                typeof p?.client === "object" && p?.client !== null
+                  ? p.client.name
+                  : typeof p?.client === "string"
+                  ? p.client
+                  : p?.clientName ?? null;
+
+              return {
                 id: p.id,
                 name: p.name,
-                client: p.client ?? p.clientName ?? null,
+                clientName,
                 status: p.status ?? null,
                 priority: p.priority ?? null,
                 description: p.description ?? "",
-              }))
-            );
-          }
-        } else {
-          // 2) Fallback: GET /projects/:id em paralelo
-          const results = await Promise.all(
-            ids.map(async (id) => {
-              const r = await fetch(`${API_BASE}/projects/${id}`);
-              if (!r.ok) throw new Error(`Falha ao carregar projeto ${id}`);
-              return r.json();
+              } as ProjectMinimal;
             })
           );
-          if (!ignore) {
-            setSelectedProjects(
-              results.map((p) => ({
-                id: p.id,
-                name: p.name,
-                client: p.client ?? p.clientName ?? null,
-                status: p.status ?? null,
-                priority: p.priority ?? null,
-                description: p.description ?? "",
-              }))
-            );
-          }
         }
       } catch (e) {
         console.error(e);
@@ -196,7 +196,7 @@ export default function EditMultipleProjectsPage(): JSX.Element {
                   <div key={p.id} className="flex items-center justify-between rounded-lg border p-3">
                     <div className="min-w-0">
                       <h3 className="truncate font-medium">{p.name}</h3>
-                      <p className="text-sm text-muted-foreground">{p.client ?? "—"}</p>
+                      <p className="text-sm text-muted-foreground">{p.clientName ?? "—"}</p>
                     </div>
                     <div className="flex gap-3 text-sm text-muted-foreground">
                       <span>{p.status ?? "sem status"}</span>

@@ -1,20 +1,41 @@
 // src/components/PrivateRoute.tsx
+import React from "react";
 import { Navigate, useLocation } from "react-router-dom";
-import { isAuthenticated, LOGIN_PATH, setReturnTo } from "@/services/auth";
+import {
+  isAuthenticated,
+  LOGIN_PATH,
+  setReturnTo,
+  logout,
+} from "@/services/auth";
 
 /**
- * Wrapper para rotas privadas considerando JWT **ou** cookie-only.
+ * Componente de rota protegida:
+ * - Exige usuário autenticado (token válido e não expirado)
+ * - Armazena a rota atual para redirecionar após login
+ * - Se token expirar, faz logout e retorna à tela de login
  */
-export function PrivateRoute({ children }: { children: JSX.Element }) {
+type Props = {
+  children: React.ReactNode;
+};
+
+export const PrivateRoute: React.FC<Props> = ({ children }) => {
   const location = useLocation();
-  const dest = `${location.pathname}${location.search}${location.hash}`;
 
-  if (location.pathname.startsWith(LOGIN_PATH)) return children;
+  // Checa se o token (ou cookie) ainda é válido
+  const authed = isAuthenticated();
 
-  if (!isAuthenticated()) {
-    setReturnTo(dest);
-    return <Navigate to={`${LOGIN_PATH}?returnTo=${encodeURIComponent(dest)}`} replace />;
+  if (!authed) {
+    // limpa qualquer resquício (em caso de expiração)
+    logout();
+
+    // salva o caminho atual para retorno pós-login
+    const cur = `${location.pathname}${location.search}${location.hash}`;
+    setReturnTo(cur);
+
+    const target = `${LOGIN_PATH}?returnTo=${encodeURIComponent(cur)}`;
+    return <Navigate to={target} replace />;
   }
 
-  return children;
-}
+  // se estiver autenticado, renderiza normalmente
+  return <>{children}</>;
+};
