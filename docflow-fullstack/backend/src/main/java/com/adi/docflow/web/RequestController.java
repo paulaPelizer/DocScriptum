@@ -11,12 +11,14 @@ import com.adi.docflow.web.dto.ProjectDTO;
 import com.adi.docflow.web.dto.RequestResponseDTO;
 import com.adi.docflow.web.dto.RequestSummaryDTO;
 import com.adi.docflow.web.dto.UpdateRequestDTO;
-import com.adi.docflow.web.dto.NotifyRequesterDTO; // << novo import
+import com.adi.docflow.web.dto.NotifyRequesterDTO; // já estava aqui
 
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.mail.javamail.JavaMailSender;      // << novo
+import org.springframework.mail.SimpleMailMessage;      // << novo
 
 import java.net.URI;
 import java.time.OffsetDateTime;
@@ -29,11 +31,14 @@ public class RequestController {
 
     private final RequestService service;
     private final RequestDocumentRepository reqDocRepo;
+    private final JavaMailSender mailSender; // << novo
 
     public RequestController(RequestService service,
-                             RequestDocumentRepository reqDocRepo) {
+                             RequestDocumentRepository reqDocRepo,
+                             JavaMailSender mailSender) { // << novo parâmetro
         this.service = service;
         this.reqDocRepo = reqDocRepo;
+        this.mailSender = mailSender; // << novo
     }
 
     /* ------------------------ MAPEADORES DTO ------------------------ */
@@ -255,7 +260,7 @@ public class RequestController {
         }
     }
 
-    /* =================== NOTIFICAÇÃO DO SOLICITANTE =================== 
+    /* =================== NOTIFICAÇÃO DO SOLICITANTE =================== */
 
     @PostMapping("{id}/notify-requester")
     @Transactional
@@ -266,16 +271,38 @@ public class RequestController {
         if (body == null || body.getMessage() == null || body.getMessage().isBlank()) {
             return ResponseEntity.badRequest().build();
         }
+
         try {
-            service.notifyRequester(id, body.getMessage());
+            // reutiliza o service.get(id) que já existe
+            Request req = service.get(id).orElseThrow(NoSuchElementException::new);
+
+            String email = req.getRequesterContact(); // aqui você está guardando o e-mail do solicitante
+            if (email == null || email.isBlank()) {
+                // por exemplo: request foi criada sem e-mail de contato
+                return ResponseEntity.badRequest().build();
+            }
+
+            String subject = "[DocScriptum] Atualização da sua solicitação";
+            if (req.getRequestNumber() != null && !req.getRequestNumber().isBlank()) {
+                subject += " #" + req.getRequestNumber();
+            }
+
+            SimpleMailMessage msg = new SimpleMailMessage();
+            msg.setTo(email);
+            msg.setSubject(subject);
+            msg.setText(body.getMessage());
+
+            // Remetente será o e-mail configurado em spring.mail.username
+            mailSender.send(msg);
+
             return ResponseEntity.noContent().build();
         } catch (NoSuchElementException e) {
             return ResponseEntity.notFound().build();
-        } catch (IllegalStateException e) {
-            // por exemplo: request sem e-mail de contato
-            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            // erro genérico (SMTP, etc.)
+            return ResponseEntity.status(500).build();
         }
-    }*/
+    }
 
     /* =================== PROTOCOLO & FINALIZAÇÃO =================== */
 
@@ -307,4 +334,5 @@ public class RequestController {
             return ResponseEntity.notFound().build();
         }
     }
+
 }

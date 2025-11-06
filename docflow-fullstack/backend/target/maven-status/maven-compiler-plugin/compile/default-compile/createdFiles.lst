@@ -25,6 +25,7 @@ com\adi\docflow\service\processor\ImportDocumentsProcessor.class
 com\adi\docflow\model\DocTypeView.class
 com\adi\docflow\service\DocumentService.class
 com\adi\docflow\web\dto\GrdResponseDTO$GrdResponseDTOBuilder.class
+com\adi\docflow\web\AuthController$ResetPasswordDTO.class
 com\adi\docflow\web\ClientController.class
 com\adi\docflow\web\dto\DocumentFormDataDTO$DocumentFormDataDTOBuilder.class
 com\adi\docflow\web\dto\ProjectSummaryDTO.class
@@ -37,14 +38,17 @@ com\adi\docflow\service\processor\JobProcessor.class
 com\adi\docflow\job\JobType.class
 com\adi\docflow\web\dto\ClientCreateDTO.class
 com\adi\docflow\repository\DocTypeLookupRepository.class
+com\adi\docflow\model\PasswordResetToken.class
 com\adi\docflow\web\dto\RegisterUserDTO.class
 com\adi\docflow\repository\ProjectLookupRepository.class
 com\adi\docflow\model\Request.class
 com\adi\docflow\web\dto\DocTipoQtdInput.class
+com\adi\docflow\repository\PasswordResetTokenRepository.class
 com\adi\docflow\web\dto\CreateProjectDTO.class
 com\adi\docflow\web\dto\MarcoContratualInput.class
 com\adi\docflow\web\dto\CreateRequestDTO.class
 com\adi\docflow\repository\GrdItemRepository.class
+com\adi\docflow\web\AuthController$ForgotPasswordDTO.class
 com\adi\docflow\repository\AutomationJobRepository.class
 com\adi\docflow\web\DocumentController.class
 com\adi\docflow\web\JobController.class

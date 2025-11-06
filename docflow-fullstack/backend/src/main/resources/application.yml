@@ -40,6 +40,18 @@ spring:
     create-schemas: true
     locations: classpath:db/migration
 
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: adisolutionsmestre@gmail.com
+    password: wlzk yaka rzky krck
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
 management:
   endpoints:
     web:
@@ -52,7 +64,7 @@ management:
 security:
   jwt:
     secret: "47c494cec5707734249282b70b949039"   # >=32 bytes (ok)
-    exp-minutes: 120          # <<< duração do token JWT em minutos (tempo de sessão)
+    exp-minutes: 120          # duração do token JWT em minutos (tempo de sessão)
     clock-skew-seconds: 30    # tolerância de relógio entre servidor/cliente
 
 app:
@@ -62,24 +74,6 @@ app:
       admin-token: "TOKEN_ADMIN_SECRETO"
       resource-token: "TOKEN_RESOURCE_SECRETO"
       user-token: "TOKEN_USER_SECRETO"
+  frontend:
+    reset-url: "http://localhost:5173/reset-access"
 
-# Se quiser reduzir o tempo para pedir login de novo,
-# basta diminuir o security.jwt.exp-minutes (ex: 30).
-
-# <<<spring:
-# <<<  mail:
-# <<<    host: smtp.gmail.com
-# <<<    port: 587
-# <<<    username: "seu_email@gmail.com"
-# <<<    password: "sua_senha_ou_app_password"
-# <<<    properties:
-# <<<      mail:
-# <<<        smtp:
-# <<<          auth: true
-# <<<          starttls:
-# <<<            enable: true
-# <<<
-# <<<app:
-# <<<  mail:
-# <<<    from: "docflow@seudominio.com">>>
-# <<<

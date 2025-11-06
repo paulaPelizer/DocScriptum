@@ -1,12 +1,16 @@
 package com.adi.docflow.web;
 
-import com.adi.docflow.model.AppUser;
-import com.adi.docflow.repository.UserRepository;
 import com.adi.docflow.config.security.JwtService;
+import com.adi.docflow.model.AppUser;
+import com.adi.docflow.model.PasswordResetToken;
+import com.adi.docflow.repository.PasswordResetTokenRepository;
+import com.adi.docflow.repository.UserRepository;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -16,8 +20,11 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -27,6 +34,8 @@ public class AuthController {
     private final JwtService jwtService;
     private final UserRepository userRepo;
     private final PasswordEncoder encoder;
+    private final PasswordResetTokenRepository resetTokenRepo;
+    private final JavaMailSender mailSender;
 
     // ===== TOKENS VINDOS DO application.yml =====
     @Value("${app.auth.registration.dba-token}")
@@ -41,14 +50,22 @@ public class AuthController {
     @Value("${app.auth.registration.user-token}")
     private String userToken; // se não for usar, pode remover
 
+    // URL base para tela de redefinição no frontend
+    @Value("${app.frontend.reset-url}")
+    private String frontendResetUrl;
+
     public AuthController(AuthenticationManager authManager,
                           JwtService jwtService,
                           UserRepository userRepo,
-                          PasswordEncoder encoder) {
+                          PasswordEncoder encoder,
+                          PasswordResetTokenRepository resetTokenRepo,
+                          JavaMailSender mailSender) {
         this.authManager = authManager;
         this.jwtService = jwtService;
         this.userRepo = userRepo;
         this.encoder = encoder;
+        this.resetTokenRepo = resetTokenRepo;
+        this.mailSender = mailSender;
     }
 
     // ===== DTOs =====
@@ -60,12 +77,23 @@ public class AuthController {
 
     public record AuthResponse(String token, String username, List<String> roles) {}
 
-    // RegisterDTO AGORA TEM EMAIL
     public record RegisterDTO(
             @NotBlank String username,
             @NotBlank String password,
-            @NotBlank String email,  // <- email aqui
-            String token              // vem no body; pode ser null se vier só no header
+            @NotBlank String email,
+            String token // vem no body; pode ser null se vier só no header
+    ) {}
+
+    // <<< NOVO: DTO para solicitar redefinição de senha >>>
+    public record ForgotPasswordDTO(
+            @NotBlank String email
+    ) {}
+
+    // <<< NOVO: DTO para aplicar a nova senha/usuário >>>
+    public record ResetPasswordDTO(
+            @NotBlank String token,
+            @NotBlank String newPassword,
+            String newUsername
     ) {}
 
     // ===== LOGIN =====
@@ -130,10 +158,9 @@ public class AuthController {
         AppUser u = new AppUser();
         u.setUsername(dto.username().trim());
         u.setPassword(encoder.encode(dto.password()));
-        u.setEnabled(true);              // <- aqui é só true mesmo
-        u.setRoles(role);                // "DBA" | "ADMIN" | "RESOURCE"
+        u.setEnabled(true);
+        u.setRoles(role); // "DBA" | "ADMIN" | "RESOURCE"
 
-        // Seta o e-mail no AppUser
         if (dto.email() != null) {
             u.setEmail(dto.email().trim());
         }
@@ -143,6 +170,109 @@ public class AuthController {
         return ResponseEntity.ok(Map.of(
                 "username", u.getUsername(),
                 "role", role
+        ));
+    }
+
+    // ===== NOVO: SOLICITAÇÃO DE REDEFINIÇÃO DE SENHA POR E-MAIL =====
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordDTO dto) {
+        String email = dto.email().trim();
+
+        Optional<AppUser> optUser = userRepo.findByEmail(email);
+
+        // Por segurança, sempre responder OK, mesmo se o e-mail não existir
+        if (optUser.isEmpty()) {
+            return ResponseEntity.ok(Map.of(
+                    "message", "Se o e-mail estiver cadastrado, enviaremos instruções para redefinição."
+            ));
+        }
+
+        AppUser user = optUser.get();
+
+        // Gera token aleatório
+        String token = UUID.randomUUID().toString();
+
+        // Cria registro de token com expiração (ex.: 1 hora)
+        PasswordResetToken resetToken = new PasswordResetToken();
+        resetToken.setToken(token);
+        resetToken.setUser(user);
+        resetToken.setExpiresAt(LocalDateTime.now().plusHours(1));
+        resetToken.setUsed(false);
+
+        resetTokenRepo.save(resetToken);
+
+        // Monta link de redefinição
+        String link = frontendResetUrl + "?token=" + token;
+
+        // Envia e-mail simples
+        SimpleMailMessage msg = new SimpleMailMessage();
+        msg.setTo(email);
+        msg.setSubject("DocScriptum - Redefinição de acesso");
+        msg.setText("""
+                Olá,
+
+                Recebemos uma solicitação para redefinir sua senha/acesso no DocScriptum.
+
+                Para continuar, acesse o link abaixo:
+
+                %s
+
+                Se você não fez esta solicitação, ignore este e-mail.
+
+                Atenciosamente,
+                DocScriptum
+                """.formatted(link)
+        );
+
+        mailSender.send(msg);
+
+        return ResponseEntity.ok(Map.of(
+                "message", "Se o e-mail estiver cadastrado, enviaremos instruções para redefinição."
+        ));
+    }
+
+    // ===== NOVO: APLICA NOVA SENHA (E OPCIONALMENTE NOVO USERNAME) =====
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordDTO dto) {
+        String token = dto.token().trim();
+
+        PasswordResetToken resetToken = resetTokenRepo.findByToken(token)
+                .orElse(null);
+
+        if (resetToken == null ||
+                resetToken.isUsed() ||
+                resetToken.getExpiresAt().isBefore(LocalDateTime.now())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Token de redefinição inválido ou expirado.");
+        }
+
+        AppUser user = resetToken.getUser();
+
+        // Atualiza senha
+        user.setPassword(encoder.encode(dto.newPassword()));
+
+        // Se veio novo usuário, atualiza também (validar duplicidade se quiser)
+        if (dto.newUsername() != null && !dto.newUsername().isBlank()) {
+            String newUsername = dto.newUsername().trim();
+            // se quiser, checa se já existe
+            if (!newUsername.equalsIgnoreCase(user.getUsername()) &&
+                    userRepo.existsByUsernameIgnoreCase(newUsername)) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body("Já existe um usuário com esse username.");
+            }
+            user.setUsername(newUsername);
+        }
+
+        userRepo.save(user);
+
+        // marca token como utilizado
+        resetToken.setUsed(true);
+        resetTokenRepo.save(resetToken);
+
+        return ResponseEntity.ok(Map.of(
+                "message", "Senha redefinida com sucesso."
         ));
     }
 

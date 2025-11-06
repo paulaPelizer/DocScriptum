@@ -1,5 +1,3 @@
-// src/services/auth.ts
-
 /**
  * Chaves de armazenamento do token (compat com trechos antigos).
  */
@@ -348,4 +346,48 @@ export function handleAuthErrorAndRedirect(rawMessage = ""): never {
   }
 
   throw new Error(`Não autorizado. Faça login novamente.\n${rawMessage}`);
+}
+
+/* ===================== RECUPERAÇÃO DE SENHA ===================== */
+
+/**
+ * Solicita redefinição de senha (envia e-mail se o endereço estiver cadastrado).
+ * Usa o endpoint POST /api/v1/auth/forgot-password.
+ */
+export async function requestPasswordReset(email: string): Promise<void> {
+  const res = await fetch("/api/v1/auth/forgot-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+
+  if (!res.ok) {
+    const msg = await res.text().catch(() => res.statusText);
+    throw new Error(msg || "Falha ao solicitar redefinição de senha");
+  }
+}
+
+/**
+ * Aplica a nova senha (e opcionalmente novo username) usando o token enviado por e-mail.
+ * Usa o endpoint POST /api/v1/auth/reset-password.
+ */
+export async function resetPassword(
+  token: string,
+  newPassword: string,
+  newUsername?: string
+): Promise<void> {
+  const res = await fetch("/api/v1/auth/reset-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      token,
+      newPassword,
+      newUsername,
+    }),
+  });
+
+  if (!res.ok) {
+    const msg = await res.text().catch(() => res.statusText);
+    throw new Error(msg || "Falha ao redefinir senha");
+  }
 }

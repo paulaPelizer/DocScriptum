@@ -1,7 +1,7 @@
 // src/pages/login/index.tsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { login, finishLogin, register } from "@/services/auth";
+import { login, finishLogin, register, requestPasswordReset } from "@/services/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,10 +19,17 @@ export default function LoginPage() {
   const [regUsername, setRegUsername] = useState("");
   const [regPassword, setRegPassword] = useState("");
   const [regConfirm, setRegConfirm] = useState("");
-  const [regEmail, setRegEmail] = useState("");     // <- novo (já estava aí)
+  const [regEmail, setRegEmail] = useState(""); // <- já existia
   const [regToken, setRegToken] = useState("");
   const [regError, setRegError] = useState("");
   const [regLoading, setRegLoading] = useState(false);
+
+  // ===== Esqueci minha senha =====
+  const [showForgot, setShowForgot] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotError, setForgotError] = useState("");
+  const [forgotInfo, setForgotInfo] = useState("");
 
   const navigate = useNavigate();
 
@@ -47,7 +54,7 @@ export default function LoginPage() {
     e.preventDefault();
     setRegError("");
 
-    // <<< inclui validação do e-mail também >>>
+    // inclui validação do e-mail também
     if (
       !regUsername.trim() ||
       !regEmail.trim() ||
@@ -71,7 +78,7 @@ export default function LoginPage() {
         body: JSON.stringify({
           username: regUsername.trim(),
           password: regPassword,
-          email: regEmail.trim(),      // <<< envia o email para o backend
+          email: regEmail.trim(),
           token: regToken.trim(),
         }),
       });
@@ -111,8 +118,43 @@ export default function LoginPage() {
     setRegUsername("");
     setRegPassword("");
     setRegConfirm("");
-    setRegEmail("");   // <<< limpa o email também
+    setRegEmail("");
     setRegToken("");
+  };
+
+  // ====== ESQUECI MINHA SENHA: chamada ao backend ======
+  const handleForgotSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotError("");
+    setForgotInfo("");
+
+    if (!forgotEmail.trim()) {
+      setForgotError("Informe o e-mail cadastrado.");
+      return;
+    }
+
+    setForgotLoading(true);
+    try {
+      // usando o service centralizado
+      await requestPasswordReset(forgotEmail.trim());
+
+      setForgotInfo(
+        "Se o e-mail estiver cadastrado, você receberá um link para redefinir sua senha."
+      );
+      setForgotEmail("");
+    } catch (err: any) {
+      setForgotError(err?.message ?? "Falha ao solicitar redefinição.");
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  const closeForgot = () => {
+    if (forgotLoading) return;
+    setShowForgot(false);
+    setForgotError("");
+    setForgotInfo("");
+    setForgotEmail("");
   };
 
   return (
@@ -164,6 +206,17 @@ export default function LoginPage() {
               />
             </div>
 
+            {/* link "Esqueci minha senha" */}
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowForgot(true)}
+                className="text-xs text-white/80 hover:text-white underline underline-offset-2"
+              >
+                Esqueci minha senha
+              </button>
+            </div>
+
             {infoMessage && (
               <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/15 px-3 py-2 text-sm text-emerald-100">
                 {infoMessage}
@@ -179,7 +232,7 @@ export default function LoginPage() {
             <Button
               type="submit"
               disabled={isLoading}
-              className="mt-4 h-10 w-full text-base"
+              className="mt-2 h-10 w-full text-base"
             >
               {isLoading ? "Entrando..." : "Entrar"}
             </Button>
@@ -245,7 +298,7 @@ export default function LoginPage() {
                 />
               </div>
 
-              {/* <<< NOVO CAMPO DE EMAIL SEPARADO >>> */}
+              {/* Campo de e-mail separado */}
               <div className="space-y-1.5">
                 <Label htmlFor="reg-email" className="text-xs text-white">
                   E-mail
@@ -310,6 +363,76 @@ export default function LoginPage() {
                   className="h-8 px-4 text-xs"
                 >
                   {regLoading ? "Cadastrando..." : "Cadastrar"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ===== Modal Esqueci Minha Senha ===== */}
+      {showForgot && (
+        <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/60">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900/95 p-6 text-white shadow-2xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Redefinir senha</h2>
+              <button
+                type="button"
+                onClick={closeForgot}
+                className="text-sm text-white/60 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="mb-4 text-xs text-white/70">
+              Informe o <strong>e-mail cadastrado</strong>. Se ele estiver registrado no sistema,
+              você receberá um link para redefinir sua senha (e, se desejar, seu usuário).
+            </p>
+
+            <form onSubmit={handleForgotSubmit} className="space-y-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="forgot-email" className="text-xs text-white">
+                  E-mail cadastrado
+                </Label>
+                <Input
+                  id="forgot-email"
+                  type="email"
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  className="bg-white/80 text-foreground placeholder:text-muted-foreground text-sm"
+                  placeholder="usuario@empresa.com"
+                />
+              </div>
+
+              {forgotError && (
+                <div className="mt-1 rounded-lg border border-red-500/40 bg-red-500/15 px-3 py-2 text-xs text-red-100">
+                  {forgotError}
+                </div>
+              )}
+
+              {forgotInfo && (
+                <div className="mt-1 rounded-lg border border-emerald-500/40 bg-emerald-500/15 px-3 py-2 text-xs text-emerald-100">
+                  {forgotInfo}
+                </div>
+              )}
+
+              <div className="mt-4 flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={forgotLoading}
+                  onClick={closeForgot}
+                  className="h-8 px-3 text-xs"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={forgotLoading}
+                  className="h-8 px-4 text-xs"
+                >
+                  {forgotLoading ? "Enviando..." : "Enviar link"}
                 </Button>
               </div>
             </form>

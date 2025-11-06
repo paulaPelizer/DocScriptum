@@ -18,6 +18,9 @@ const P = (el: JSX.Element) => <PrivateRoute>{el}</PrivateRoute>;
 const PageHome = React.lazy(() => import("@/pages/index"));
 const PageLogin = React.lazy(() => import("@/pages/login/index"));
 
+/** RESET ACCESS (NOVO) */
+const PageResetAccess = React.lazy(() => import("@/pages/reset-access/index"));
+
 /** CLIENTES */
 const PageClients = React.lazy(() => import("@/pages/clients/index"));
 const PageClientsNew = React.lazy(() => import("@/pages/clients/new/index"));
@@ -83,6 +86,9 @@ const routes: RouteObject[] = [
   // Públicas
   { path: "/", element: <F><PageHome /></F> },
   { path: "/login", element: <F><PageLogin /></F> },
+
+  // <<< NOVA ROTA PÚBLICA PARA REDEFINIÇÃO DE ACESSO >>>
+  { path: "/reset-access", element: <F><PageResetAccess /></F> },
 
   // Dashboard
   { path: "/dashboard", element: P(<F><PageDashboard /></F>) },
