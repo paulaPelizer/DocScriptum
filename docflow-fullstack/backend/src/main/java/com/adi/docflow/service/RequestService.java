@@ -12,8 +12,8 @@ import com.adi.docflow.repository.OrganizationRepository;
 import com.adi.docflow.repository.ProjectRepository;
 import com.adi.docflow.repository.RequestDocumentRepository;
 import com.adi.docflow.repository.RequestRepository;
-import com.adi.docflow.web.dto.UpdateRequestDTO;
 import com.adi.docflow.web.dto.RequestSummaryDTO;
+import com.adi.docflow.web.dto.UpdateRequestDTO;
 
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
@@ -33,7 +33,6 @@ public class RequestService {
     private final OrganizationRepository orgRepo;
     private final DocumentRepository docRepo;
     private final RequestDocumentRepository reqDocRepo;
-    /*private final EmailService emailService; // << novo*/
 
     private final Random rnd = new Random();
 
@@ -42,13 +41,11 @@ public class RequestService {
                           OrganizationRepository orgRepo,
                           DocumentRepository docRepo,
                           RequestDocumentRepository reqDocRepo) {
-                          /*EmailService emailService) { // << injeta EmailService*/
         this.requestRepo = requestRepo;
         this.projectRepo = projectRepo;
         this.orgRepo = orgRepo;
         this.docRepo = docRepo;
         this.reqDocRepo = reqDocRepo;
-        /*this.emailService = emailService;*/
     }
 
     /* ===================== Lookups obrigatórios ===================== */
@@ -117,7 +114,7 @@ public class RequestService {
 
         Request saved = requestRepo.save(req);
 
-        // Vinculação de documentos (reativada)
+        // Vinculação de documentos
         if (documentIds != null && !documentIds.isEmpty()) {
             bindDocuments(saved, documentIds);
         }
@@ -186,47 +183,11 @@ public class RequestService {
         if (body.getSpecialInstructions() != null) { r.setSpecialInstructions(body.getSpecialInstructions()); touched = true; }
         if (body.getStatus() != null) { r.setStatus(body.getStatus()); touched = true; }
 
-        // Documentos ainda mantidos desativados no update para evitar duplicações,
-        // mas você pode reativar quando quiser:
-        // if (body.getDocumentIds() != null) {
-        //     bindDocuments(r, body.getDocumentIds());
-        //     touched = true;
-        // }
-
         if (touched) {
             r.setUpdatedAt(now);
             r = requestRepo.save(r);
         }
         return r;
-    }
-
-    /* =============== Notificação do solicitante por e-mail =============== */
-
-    /*@Transactional
-    public void notifyRequester(Long requestId, String message) {
-        Request r = requestRepo.findById(requestId)
-                .orElseThrow(() -> new NoSuchElementException("requestId " + requestId + " não encontrado"));
-
-        String to = (r.getRequesterContact() != null) ? r.getRequesterContact().trim() : "";
-        if (to.isBlank() && r.getOrigin() != null && r.getOrigin().getContactEmail() != null) {
-            to = r.getOrigin().getContactEmail().trim();
-        }
-
-        if (to.isBlank()) {
-            throw new IllegalStateException(
-                    "Solicitação " + requestId + " não possui e-mail de contato do solicitante (requester_contact/origin.contactEmail)."
-            );
-        }
-
-        String subject = "Pendências de documentos - Solicitação " + r.getRequestNumber();
-        String body = message;
-
-        // Se quiser enriquecer:
-        // String nome = (r.getRequesterName() != null && !r.getRequesterName().isBlank())
-        //         ? r.getRequesterName().trim() : "solicitante";
-        // body = "Prezado(a) " + nome + ",\n\n" + message + "\n\nAtenciosamente,\nEquipe DocFlow";
-
-        emailService.send(to, subject, body);
     }
 
     /* =============== Protocolo e finalização =============== */
@@ -257,7 +218,6 @@ public class RequestService {
         r.setStatus(RequestStatus.COMPLETED);
         r.setUpdatedAt(OffsetDateTime.now());
 
-        // Se existir o campo completedAt no modelo, define via reflexão sem quebrar o build se não existir.
         try {
             Field f = Request.class.getDeclaredField("completedAt");
             f.setAccessible(true);
@@ -265,7 +225,7 @@ public class RequestService {
                 f.set(r, OffsetDateTime.now());
             }
         } catch (NoSuchFieldException ignored) {
-            // ok: campo não existe no seu modelo atual
+            // campo não existe no modelo atual
         } catch (IllegalAccessException e) {
             throw new RuntimeException("Falha ao definir completedAt", e);
         }
@@ -284,6 +244,53 @@ public class RequestService {
         r.setUpdatedAt(OffsetDateTime.now());
         // opcional: persistir reason em log/campo
         return requestRepo.save(r);
+    }
+
+    /* =============== Disparado quando um DOCUMENTO é atualizado =============== */
+
+    /**
+     * Deve ser chamado sempre que um Document tiver seu arquivo / upload_hash atualizado.
+     *  - Atualiza snapshot de doc_edit_count (e, se necessário, da hash base);
+         *  - Se a Request estiver em WAITING_CLIENT, muda para WAITING_ADM.
+     */
+    @Transactional
+    public void handleDocumentUpdated(Long documentId) {
+        // documento já atualizado
+        Document doc = docRepo.findById(documentId).orElse(null);
+
+        List<RequestDocument> links = reqDocRepo.findByDocumentId(documentId);
+        if (links == null || links.isEmpty()) {
+            return;
+        }
+
+        OffsetDateTime now = OffsetDateTime.now();
+
+        for (RequestDocument rd : links) {
+            // Atualiza snapshot da versão do doc na request_document
+            if (doc != null) {
+                // mantém a hash base; se ainda não existe em request_document, calcula
+                if (rd.getDocUploadHash() == null && doc.getUploadHash() != null) {
+                    String base = doc.getUploadHash();
+                    int idx = base.indexOf('_');
+                    if (idx > 0) {
+                        base = base.substring(0, idx);
+                    }
+                    rd.setDocUploadHash(base);
+                }
+                rd.setDocEditCount(doc.getEditCount());
+                reqDocRepo.save(rd);
+            }
+
+            // Atualiza o status da Request (WAITING_CLIENT -> WAITING_ADM)
+            Request r = rd.getRequest();
+            if (r == null) continue;
+
+            if (r.getStatus() == RequestStatus.WAITING_CLIENT) {
+                r.setStatus(RequestStatus.WAITING_ADM); // enum precisa ter WAITING_ADM
+                r.setUpdatedAt(now);
+                requestRepo.save(r);
+            }
+        }
     }
 
     /* =============== Vincular documentos =============== */
@@ -305,13 +312,27 @@ public class RequestService {
             if (d.getProject() == null || !d.getProject().getId().equals(saved.getProject().getId())) {
                 throw new IllegalArgumentException(
                         "documentId " + d.getId() +
-                        " não pertence ao projectId " + saved.getProject().getId()
+                                " não pertence ao projectId " + saved.getProject().getId()
                 );
             }
+
             RequestDocument rd = new RequestDocument();
             rd.setRequest(saved);
             rd.setDocument(d);
             rd.setRequired(false); // ajuste conforme sua regra
+
+            // Snapshot da situação do documento na hora da criação da Request
+            String baseHash = null;
+            if (d.getUploadHash() != null) {
+                baseHash = d.getUploadHash();
+                int idx = baseHash.indexOf('_');
+                if (idx > 0) {
+                    baseHash = baseHash.substring(0, idx);
+                }
+            }
+            rd.setDocUploadHash(baseHash);       // hash original (sem sufixo _1, _2, ...)
+            rd.setDocEditCount(d.getEditCount()); // edit_count atual (pode ser null na 1ª vez)
+
             reqDocRepo.save(rd);
         }
     }

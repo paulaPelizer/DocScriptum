@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 
 import AppHeader from "@/components/AppHeader";
 import { PageHeader } from "@/components/page-header";
@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 
-import { apiPost } from "@/services/api";
+import { apiGet, apiPost, apiPut } from "@/services/api";
 import { Mail, Phone, Building2, UserPlus, Save, ArrowLeft, Hash } from "lucide-react";
 
 type OrgType = "client" | "supplier" | "internal";
@@ -41,8 +41,24 @@ const INITIAL: FormState = {
   notes: "",
 };
 
+// formato que o backend devolve em /resources/{id}
+type ResourceApi = {
+  id: number;
+  name: string;
+  role: string;
+  email: string;
+  phone?: string | null;
+  partnershipType?: string | null;   // "CLIENT" | "SUPPLIER" | "INTERNAL"
+  partnershipName?: string | null;
+  status?: string | null;            // "ATIVO" | "INATIVO"
+  tags?: string[];
+  notes?: string | null;
+};
+
 export default function ResourceNewPage() {
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+  const isEdit = !!id;
 
   const [form, setForm] = useState<FormState>(INITIAL);
   const [tagDraft, setTagDraft] = useState("");
@@ -73,41 +89,96 @@ export default function ResourceNewPage() {
     return Object.keys(e).length === 0;
   };
 
+  // mapeia partnershipType ("CLIENT"/"SUPPLIER"/"INTERNAL") -> OrgType
+  const mapOrgTypeFromApi = (p?: string | null): OrgType => {
+    const v = (p ?? "").toUpperCase();
+    if (v === "SUPPLIER") return "supplier";
+    if (v === "INTERNAL") return "internal";
+    return "client";
+  };
+
+  const mapStatusFromApi = (s?: string | null): FormState["status"] => {
+    const v = (s ?? "").toUpperCase();
+    return v === "INATIVO" ? "Inativo" : "Ativo";
+  };
+
+  // carregar dados no modo edição
+  useEffect(() => {
+    if (!isEdit || !id) return;
+
+    (async () => {
+      try {
+        const r = await apiGet<ResourceApi>(`/api/v1/resources/${id}`);
+
+        setForm({
+          name: r.name ?? "",
+          role: r.role ?? "",
+          email: r.email ?? "",
+          phone: r.phone ?? "",
+          orgType: mapOrgTypeFromApi(r.partnershipType),
+          orgName: r.partnershipName ?? "",
+          status: mapStatusFromApi(r.status),
+          tags: r.tags ?? [],
+          notes: r.notes ?? "",
+        });
+      } catch (e) {
+        console.error("Erro ao carregar recurso:", e);
+      }
+    })();
+  }, [id, isEdit]);
+
   const onSubmit = async (ev: React.FormEvent) => {
     ev.preventDefault();
     if (!validate()) return;
     setSubmitting(true);
     try {
-      // payload alinhado aos campos usados na listagem
+      // status da tela -> status do backend (ATIVO / INATIVO)
+      const backendStatus = form.status === "Ativo" ? "ATIVO" : "INATIVO";
+
+      // payload alinhado ao CreateResourceDTO do backend
       const payload = {
         name: form.name,
         role: form.role,
         email: form.email,
         phone: form.phone || null,
-        orgType: form.orgType,
+        orgType: form.orgType,      // "client" | "supplier" | "internal"
         orgName: form.orgName,
-        status: form.status,
+        status: backendStatus,
         tags: form.tags,
         notes: form.notes || null,
       };
 
-      // ajuste o endpoint conforme seu backend
-      await apiPost("/api/v1/resources", payload);
+      if (isEdit && id) {
+        await apiPut(`/api/v1/resources/${id}`, payload);
+      } else {
+        await apiPost("/api/v1/resources", payload);
+      }
 
       navigate("/resources");
     } catch (err) {
       console.error(err);
       // feedback mínimo
-      setErrors((p) => ({ ...p, name: (p.name as any) || "Falha ao salvar. Tente novamente." }));
+      setErrors((p) => ({ ...p, name: p.name || "Falha ao salvar. Tente novamente." }));
     } finally {
       setSubmitting(false);
     }
   };
 
   const orgTypeLabel = useMemo(
-    () => (form.orgType === "client" ? "Cliente" : form.orgType === "supplier" ? "Fornecedor" : "Interno"),
+    () =>
+      form.orgType === "client"
+        ? "Cliente"
+        : form.orgType === "supplier"
+        ? "Fornecedor"
+        : "Interno",
     [form.orgType]
   );
+
+  const submitLabel = submitting
+    ? "Salvando..."
+    : isEdit
+    ? "Salvar alterações"
+    : "Salvar Recurso";
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -115,8 +186,12 @@ export default function ResourceNewPage() {
       <main className="flex-1 p-4 md:p-6">
         <div className="container mx-auto">
           <PageHeader
-            title="Novo Recurso"
-            description="Cadastre usuários/contatos para clientes, fornecedores ou equipe interna"
+            title={isEdit ? "Editar Recurso" : "Novo Recurso"}
+            description={
+              isEdit
+                ? "Atualize os dados do contato/recurso"
+                : "Cadastre usuários/contatos para clientes, fornecedores ou equipe interna"
+            }
           >
             <div className="flex gap-2 w-full md:w-auto">
               <Link to="/resources">
@@ -125,9 +200,14 @@ export default function ResourceNewPage() {
                   Voltar
                 </Button>
               </Link>
-              <Button className="neon-border" form="resource-form" type="submit" disabled={submitting}>
+              <Button
+                className="neon-border"
+                form="resource-form"
+                type="submit"
+                disabled={submitting}
+              >
                 <Save className="mr-2 h-4 w-4" />
-                {submitting ? "Salvando..." : "Salvar"}
+                {submitLabel}
               </Button>
             </div>
           </PageHeader>
@@ -166,7 +246,10 @@ export default function ResourceNewPage() {
 
                   <div>
                     <Label htmlFor="status">Status</Label>
-                    <Select value={form.status} onValueChange={(v) => set("status", v as FormState["status"])}>
+                    <Select
+                      value={form.status}
+                      onValueChange={(v) => set("status", v as FormState["status"])}
+                    >
                       <SelectTrigger id="status">
                         <SelectValue placeholder="Selecione o status" />
                       </SelectTrigger>
@@ -210,7 +293,10 @@ export default function ResourceNewPage() {
                     <Label htmlFor="orgType" className="flex items-center gap-2">
                       <UserPlus className="h-4 w-4 text-muted-foreground" /> Tipo de Parceria
                     </Label>
-                    <Select value={form.orgType} onValueChange={(v) => set("orgType", v as OrgType)}>
+                    <Select
+                      value={form.orgType}
+                      onValueChange={(v) => set("orgType", v as OrgType)}
+                    >
                       <SelectTrigger id="orgType">
                         <SelectValue placeholder="Selecione" />
                       </SelectTrigger>
@@ -227,7 +313,8 @@ export default function ResourceNewPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="md:col-span-2">
                     <Label htmlFor="orgName" className="flex items-center gap-2">
-                      <Building2 className="h-4 w-4 text-muted-foreground" /> Nome da Parceria ({orgTypeLabel})
+                      <Building2 className="h-4 w-4 text-muted-foreground" /> Nome da Parceria (
+                      {orgTypeLabel})
                     </Label>
                     <Input
                       id="orgName"
@@ -235,7 +322,9 @@ export default function ResourceNewPage() {
                       value={form.orgName}
                       onChange={(e) => set("orgName", e.target.value)}
                     />
-                    {errors.orgName && <p className="text-xs text-red-500 mt-1">{errors.orgName}</p>}
+                    {errors.orgName && (
+                      <p className="text-xs text-red-500 mt-1">{errors.orgName}</p>
+                    )}
                   </div>
 
                   <div>
@@ -262,7 +351,12 @@ export default function ResourceNewPage() {
                     {form.tags.length > 0 && (
                       <div className="flex flex-wrap gap-2 mt-2">
                         {form.tags.map((t) => (
-                          <Badge key={t} variant="secondary" className="cursor-pointer" onClick={() => removeTag(t)}>
+                          <Badge
+                            key={t}
+                            variant="secondary"
+                            className="cursor-pointer"
+                            onClick={() => removeTag(t)}
+                          >
                             {t} ✕
                           </Badge>
                         ))}
@@ -291,7 +385,7 @@ export default function ResourceNewPage() {
                   </Link>
                   <Button className="neon-border" type="submit" disabled={submitting}>
                     <Save className="mr-2 h-4 w-4" />
-                    {submitting ? "Salvando..." : "Salvar Recurso"}
+                    {submitLabel}
                   </Button>
                 </div>
               </form>

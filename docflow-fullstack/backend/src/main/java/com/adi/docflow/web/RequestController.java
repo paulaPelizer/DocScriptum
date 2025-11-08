@@ -11,14 +11,14 @@ import com.adi.docflow.web.dto.ProjectDTO;
 import com.adi.docflow.web.dto.RequestResponseDTO;
 import com.adi.docflow.web.dto.RequestSummaryDTO;
 import com.adi.docflow.web.dto.UpdateRequestDTO;
-import com.adi.docflow.web.dto.NotifyRequesterDTO; // já estava aqui
+import com.adi.docflow.web.dto.NotifyRequesterDTO;
 
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.mail.javamail.JavaMailSender;      // << novo
-import org.springframework.mail.SimpleMailMessage;      // << novo
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.SimpleMailMessage;
 
 import java.net.URI;
 import java.time.OffsetDateTime;
@@ -31,14 +31,14 @@ public class RequestController {
 
     private final RequestService service;
     private final RequestDocumentRepository reqDocRepo;
-    private final JavaMailSender mailSender; // << novo
+    private final JavaMailSender mailSender;
 
     public RequestController(RequestService service,
                              RequestDocumentRepository reqDocRepo,
-                             JavaMailSender mailSender) { // << novo parâmetro
+                             JavaMailSender mailSender) {
         this.service = service;
         this.reqDocRepo = reqDocRepo;
-        this.mailSender = mailSender; // << novo
+        this.mailSender = mailSender;
     }
 
     /* ------------------------ MAPEADORES DTO ------------------------ */
@@ -66,12 +66,15 @@ public class RequestController {
 
     private DocumentDTO toDTO(Document d) {
         if (d == null) return null;
+        Long projectId = (d.getProject() != null ? d.getProject().getId() : null);
+
+        // usa o construtor "curto" do record (5 campos)
         return new DocumentDTO(
                 d.getId(),
                 d.getCode(),
                 d.getTitle(),
                 d.getRevision(),
-                d.getProject() != null ? d.getProject().getId() : null
+                projectId
         );
     }
 
@@ -166,7 +169,7 @@ public class RequestController {
         Sort sort = Sort.by(
                 sortParam.contains(",")
                         ? Sort.Order.by(sortParam.split(",")[0])
-                            .with(sortParam.toLowerCase().endsWith(",asc") ? Sort.Direction.ASC : Sort.Direction.DESC)
+                        .with(sortParam.toLowerCase().endsWith(",asc") ? Sort.Direction.ASC : Sort.Direction.DESC)
                         : Sort.Order.desc(sortParam)
         );
         Pageable pageable = PageRequest.of(page, size, sort);
@@ -273,12 +276,10 @@ public class RequestController {
         }
 
         try {
-            // reutiliza o service.get(id) que já existe
             Request req = service.get(id).orElseThrow(NoSuchElementException::new);
 
-            String email = req.getRequesterContact(); // aqui você está guardando o e-mail do solicitante
+            String email = req.getRequesterContact();
             if (email == null || email.isBlank()) {
-                // por exemplo: request foi criada sem e-mail de contato
                 return ResponseEntity.badRequest().build();
             }
 
@@ -292,14 +293,12 @@ public class RequestController {
             msg.setSubject(subject);
             msg.setText(body.getMessage());
 
-            // Remetente será o e-mail configurado em spring.mail.username
             mailSender.send(msg);
 
             return ResponseEntity.noContent().build();
         } catch (NoSuchElementException e) {
             return ResponseEntity.notFound().build();
         } catch (Exception e) {
-            // erro genérico (SMTP, etc.)
             return ResponseEntity.status(500).build();
         }
     }

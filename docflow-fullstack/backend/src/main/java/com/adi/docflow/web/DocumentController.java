@@ -2,11 +2,18 @@ package com.adi.docflow.web;
 
 import com.adi.docflow.model.Document;
 import com.adi.docflow.model.Project;
+import com.adi.docflow.model.Request;
+import com.adi.docflow.model.RequestDocument;
+import com.adi.docflow.model.RequestStatus;
+
 import com.adi.docflow.repository.DocumentRepository;
 import com.adi.docflow.repository.ProjectRepository;
 import com.adi.docflow.repository.ProjectLookupRepository;
 import com.adi.docflow.repository.DocTypeLookupRepository;
 import com.adi.docflow.repository.DisciplineLookupRepository;
+import com.adi.docflow.repository.RequestDocumentRepository;
+import com.adi.docflow.repository.RequestRepository;
+
 import com.adi.docflow.service.DocumentService;
 import com.adi.docflow.web.dto.*;
 
@@ -19,6 +26,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.net.URI;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -34,6 +42,8 @@ public class DocumentController {
     private final DocTypeLookupRepository docTypeLookupRepo;
     private final DisciplineLookupRepository disciplineLookupRepo;
     private final DocumentService documentService;
+    private final RequestDocumentRepository reqDocRepo;
+    private final RequestRepository requestRepo;
 
     public DocumentController(
             DocumentRepository docRepo,
@@ -41,7 +51,9 @@ public class DocumentController {
             ProjectLookupRepository projectLookupRepo,
             DisciplineLookupRepository disciplineLookupRepo,
             DocTypeLookupRepository docTypeLookupRepo,
-            DocumentService documentService
+            DocumentService documentService,
+            RequestDocumentRepository reqDocRepo,
+            RequestRepository requestRepo
     ) {
         this.docRepo = docRepo;
         this.projectRepo = projectRepo;
@@ -49,6 +61,8 @@ public class DocumentController {
         this.disciplineLookupRepo = disciplineLookupRepo;
         this.docTypeLookupRepo = docTypeLookupRepo;
         this.documentService = documentService;
+        this.reqDocRepo = reqDocRepo;
+        this.requestRepo = requestRepo;
     }
 
     // ============================ LISTAGEM ============================
@@ -100,10 +114,10 @@ public class DocumentController {
         ProjectSummaryDTO project = (doc.getProject() == null)
                 ? null
                 : new ProjectSummaryDTO(
-                        doc.getProject().getId(),
-                        doc.getProject().getCode(),
-                        doc.getProject().getName()
-                );
+                doc.getProject().getId(),
+                doc.getProject().getCode(),
+                doc.getProject().getName()
+        );
 
         String nameForDto = doc.getTitle(); // fallback para "name"
 
@@ -129,70 +143,69 @@ public class DocumentController {
         return ResponseEntity.ok(dto);
     }
 
-        // ============================== DETALHE (HASH OU ID) ==============================
-        @GetMapping("/documents/by-hash/{hash}")
-        @Transactional(Transactional.TxType.SUPPORTS)
-        public ResponseEntity<DocumentDetailDTO> getByHash(@PathVariable String hash) {
-            if (hash == null || hash.isBlank()) {
-                throw new ResponseStatusException(BAD_REQUEST, "hash é obrigatória");
-            }
-        
-            // 1) tenta pelo uploadHash
-            Document doc = null;
-            try {
-                doc = docRepo.findByUploadHash(hash);
-            } catch (Exception ignore) {}
-        
-            // 2) fallback: se não achou por hash, tenta tratar como ID (aceita "id-59" ou "59")
-            if (doc == null) {
-                String candidate = hash.trim();
-                if (candidate.toLowerCase().startsWith("id-")) {
-                    candidate = candidate.substring(3);
-                }
-                try {
-                    Long id = Long.valueOf(candidate);
-                    doc = docRepo.findByIdWithProject(id)
-                            .orElse(null);
-                } catch (NumberFormatException ignore) {
-                    // não é um número -> segue sem doc
-                }
-            }
-        
-            if (doc == null) {
-                throw new ResponseStatusException(NOT_FOUND, "Documento não encontrado pela hash");
-            }
-        
-            ProjectSummaryDTO project = (doc.getProject() == null)
-                    ? null
-                    : new ProjectSummaryDTO(
-                        doc.getProject().getId(),
-                        doc.getProject().getCode(),
-                        doc.getProject().getName()
-                    );
-        
-            String nameForDto = doc.getTitle();
-        
-            DocumentDetailDTO dto = new DocumentDetailDTO(
-                    doc.getId(),
-                    doc.getCode(),
-                    doc.getTitle(),
-                    nameForDto,
-                    doc.getRevision(),
-                    doc.getFormat(),
-                    doc.getCurrentLocation(),
-                    doc.getStatus(),
-                    toIsoString(doc.getUpdatedAt()),
-                    doc.getDescription(),
-                    doc.getFileUrl(),
-                    doc.getPages(),
-                    toIsoString(doc.getPerformedDate()),
-                    toIsoString(doc.getDueDate()),
-                    doc.getTechnicalResponsible(),
-                    project
-            );
-        
-            return ResponseEntity.ok(dto);
+    // ============================== DETALHE (HASH OU ID) ==============================
+    @GetMapping("/documents/by-hash/{hash}")
+    @Transactional(Transactional.TxType.SUPPORTS)
+    public ResponseEntity<DocumentDetailDTO> getByHash(@PathVariable String hash) {
+        if (hash == null || hash.isBlank()) {
+            throw new ResponseStatusException(BAD_REQUEST, "hash é obrigatória");
         }
+
+        // 1) tenta pelo uploadHash
+        Document doc = null;
+        try {
+            doc = docRepo.findByUploadHash(hash);
+        } catch (Exception ignore) {}
+
+        // 2) fallback: se não achou por hash, tenta tratar como ID (aceita "id-59" ou "59")
+        if (doc == null) {
+            String candidate = hash.trim();
+            if (candidate.toLowerCase().startsWith("id-")) {
+                candidate = candidate.substring(3);
+            }
+            try {
+                Long id = Long.valueOf(candidate);
+                doc = docRepo.findByIdWithProject(id).orElse(null);
+            } catch (NumberFormatException ignore) {
+                // não é um número -> segue sem doc
+            }
+        }
+
+        if (doc == null) {
+            throw new ResponseStatusException(NOT_FOUND, "Documento não encontrado pela hash");
+        }
+
+        ProjectSummaryDTO project = (doc.getProject() == null)
+                ? null
+                : new ProjectSummaryDTO(
+                doc.getProject().getId(),
+                doc.getProject().getCode(),
+                doc.getProject().getName()
+        );
+
+        String nameForDto = doc.getTitle();
+
+        DocumentDetailDTO dto = new DocumentDetailDTO(
+                doc.getId(),
+                doc.getCode(),
+                doc.getTitle(),
+                nameForDto,
+                doc.getRevision(),
+                doc.getFormat(),
+                doc.getCurrentLocation(),
+                doc.getStatus(),
+                toIsoString(doc.getUpdatedAt()),
+                doc.getDescription(),
+                doc.getFileUrl(),
+                doc.getPages(),
+                toIsoString(doc.getPerformedDate()),
+                toIsoString(doc.getDueDate()),
+                doc.getTechnicalResponsible(),
+                project
+        );
+
+        return ResponseEntity.ok(dto);
+    }
 
     // ============================ FORM-DATA ============================
     @GetMapping("/documents/form-data")
@@ -253,13 +266,17 @@ public class DocumentController {
                 .body(saved.getId());
     }
 
-    // ============================== UPDATE (opcional) ==============================
+    // ============================== UPDATE ==============================
     @PutMapping("/documents/{id}")
     @Transactional
     public ResponseEntity<Void> update(@PathVariable Long id, @RequestBody CreateDocumentDTO dto) {
         Document doc = docRepo.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Documento não encontrado"));
 
+        // Guarda hash anterior pra ver se a versão mudou
+        String oldHash = doc.getUploadHash();
+
+        // ---- campos básicos ----
         if (dto.projectId() != null) {
             Project project = projectRepo.findById(dto.projectId())
                     .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Projeto não encontrado"));
@@ -274,12 +291,62 @@ public class DocumentController {
         if (dto.description() != null) doc.setDescription(dto.description());
         if (dto.fileUrl() != null) doc.setFileUrl(dto.fileUrl());
         if (dto.pages() != null) doc.setPages(dto.pages());
-        // if (dto.performedDate() != null) doc.setPerformedDate(...);
-        // if (dto.dueDate() != null) doc.setDueDate(...);
         if (dto.technicalResponsible() != null) doc.setTechnicalResponsible(dto.technicalResponsible());
+        // se quiser depois, dá pra converter performedDate/dueDate aqui também
+
+        // ---- upload_hash / edit_count ----
+        String currentHash = doc.getUploadHash();
+        Integer currentEdit = doc.getEditCount();
+        if (currentEdit == null) currentEdit = 0;
+
+        String baseHash = null;
+
+        if (currentHash != null && !currentHash.isBlank()) {
+            // Já existe hash → base é o valor sem o sufixo "_n" (se existir)
+            String tmp = currentHash.trim();
+            int idx = tmp.lastIndexOf('_');
+            if (idx > 0) {
+                String suffix = tmp.substring(idx + 1);
+                boolean numeric = suffix.chars().allMatch(Character::isDigit);
+                baseHash = numeric ? tmp.substring(0, idx) : tmp;
+            } else {
+                baseHash = tmp;
+            }
+        } else if (dto.uploadHash() != null && !dto.uploadHash().isBlank()) {
+            // Caso inicial: estava sem hash no banco, mas veio uma no DTO
+            baseHash = dto.uploadHash().trim();
+            currentEdit = 0;
+        }
+
+        if (baseHash != null && !baseHash.isBlank()) {
+            int nextEdit = currentEdit + 1;
+            doc.setEditCount(nextEdit);
+            doc.setUploadHash(baseHash + "_" + nextEdit);
+        }
 
         doc.setUpdatedAt(Instant.now());
         docRepo.save(doc);
+
+        // ---- se a hash mudou -> atualizar Requests WAITING_CLIENT -> WAITING_ADM ----
+        String newHash = doc.getUploadHash();
+        boolean versionChanged =
+                (oldHash == null && newHash != null) ||
+                (oldHash != null && !oldHash.equals(newHash));
+
+        if (versionChanged) {
+            OffsetDateTime now = OffsetDateTime.now();
+            List<RequestDocument> links = reqDocRepo.findByDocumentId(doc.getId());
+
+            for (RequestDocument rd : links) {
+                Request req = rd.getRequest();
+                if (req != null && req.getStatus() == RequestStatus.WAITING_CLIENT) {
+                    req.setStatus(RequestStatus.WAITING_ADM);
+                    req.setUpdatedAt(now);
+                    requestRepo.save(req);
+                }
+            }
+        }
+
         return ResponseEntity.noContent().build();
     }
 

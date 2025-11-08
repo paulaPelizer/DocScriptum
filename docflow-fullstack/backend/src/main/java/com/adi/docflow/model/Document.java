@@ -98,6 +98,9 @@ public class Document {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
+    @Column(name = "edit_count")
+    private Integer editCount = 0;
+
     // === lifecycle hooks para timestamps automáticos ===
     @PrePersist
     public void onCreate() {
@@ -184,4 +187,7 @@ public class Document {
 
     public Instant getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
+
+    public Integer getEditCount() { return editCount;}
+    public void setEditCount(Integer editCount) { this.editCount = editCount;}
 }

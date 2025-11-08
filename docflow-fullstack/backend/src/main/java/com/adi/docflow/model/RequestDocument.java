@@ -3,8 +3,16 @@ package com.adi.docflow.model;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name="request_document", schema="app",
-       uniqueConstraints={@UniqueConstraint(name="uq_request_doc", columnNames={"request_id","document_id"})})
+@Table(
+    name = "request_document",
+    schema = "app",
+    uniqueConstraints = {
+        @UniqueConstraint(
+            name = "uq_request_doc",
+            columnNames = {"request_id", "document_id"}
+        )
+    }
+)
 public class RequestDocument {
 
     @Id
@@ -12,23 +20,70 @@ public class RequestDocument {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name="request_id", nullable=false)
+    @JoinColumn(name = "request_id", nullable = false)
     private Request request;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name="document_id", nullable=false)
+    @JoinColumn(name = "document_id", nullable = false)
     private Document document;
 
-    @Column(name="is_required", nullable=false)
+    @Column(name = "is_required", nullable = false)
     private boolean required;
 
-    // getters/setters
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    public Request getRequest() { return request; }
-    public void setRequest(Request request) { this.request = request; }
-    public Document getDocument() { return document; }
-    public void setDocument(Document document) { this.document = document; }
-    public boolean isRequired() { return required; }
-    public void setRequired(boolean required) { this.required = required; }
+    // 👇 novos campos — snapshot da versão do doc na request
+    @Column(name = "doc_upload_hash")
+    private String docUploadHash;
+
+    @Column(name = "doc_edit_count")
+    private Integer docEditCount;
+
+    // ================== getters / setters ==================
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public Request getRequest() {
+        return request;
+    }
+
+    public void setRequest(Request request) {
+        this.request = request;
+    }
+
+    public Document getDocument() {
+        return document;
+    }
+
+    public void setDocument(Document document) {
+        this.document = document;
+    }
+
+    public boolean isRequired() {
+        return required;
+    }
+
+    public void setRequired(boolean required) {
+        this.required = required;
+    }
+
+    public String getDocUploadHash() {
+        return docUploadHash;
+    }
+
+    public void setDocUploadHash(String docUploadHash) {
+        this.docUploadHash = docUploadHash;
+    }
+
+    public Integer getDocEditCount() {
+        return docEditCount;
+    }
+
+    public void setDocEditCount(Integer docEditCount) {
+        this.docEditCount = docEditCount;
+    }
 }

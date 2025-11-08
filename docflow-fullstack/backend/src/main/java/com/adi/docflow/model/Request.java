@@ -87,6 +87,8 @@ public class Request {
     private OffsetDateTime updatedAt;
     @Column(name = "protocol", length = 50, unique = false) // unicidade controlada pelo índice filtrado
     private String protocol;
+
+    
     /* =========================
        CONSTRUTORES
     ========================== */

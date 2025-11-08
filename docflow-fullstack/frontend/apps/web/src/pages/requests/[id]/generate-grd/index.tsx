@@ -22,6 +22,17 @@ import { apiGet, apiPut, apiPost } from "@/services/api"
 type ApiOrganization = { id: number; name: string | null }
 type ApiProject = { id: number; code?: string | null; name?: string | null }
 type ApiDocument = { id: number; code?: string | null; title?: string | null; revision?: string | null }
+
+// status local, incluindo Aguardando Cliente e Aguardando ADM
+type ApiStatus =
+  | "PENDING"
+  | "IN_PROGRESS"
+  | "COMPLETED"
+  | "REJECTED"
+  | "CANCELLED"
+  | "WAITING_CLIENT"
+  | "WAITING_ADM"
+
 type ApiRequest = {
   id: number
   requestNumber: string
@@ -32,6 +43,7 @@ type ApiRequest = {
   documents?: ApiDocument[]
   requesterName?: string | null
   requesterContact?: string | null
+  status?: ApiStatus
 }
 
 /* ===== Utils ===== */
@@ -164,7 +176,7 @@ export default function GenerateGRDPage() {
   const docs = useMemo(() => (req?.documents ?? []).map(enrichDoc), [req])
   const nonSequential = docs.filter(d => !d.isSequential)
   const hasRequesterPendencies = nonSequential.length > 0
-  const canGenerate = !hasRequesterPendencies
+  const canGenerate = !hasRequesterPendencies && req?.status === "WAITING_ADM"
 
   // Preenche mensagem padrão de pendências
   useEffect(() => {
@@ -194,19 +206,34 @@ Para finalizar a tramitação de número ${numero}, será necessário substituir
       return
     }
 
-    try {
-      setIsSendingMessage(true)
-      setSendError(null)
-      setMessageSent(false)
+    setIsSendingMessage(true)
+    setSendError(null)
+    setMessageSent(false)
 
+    // 1) Primeiro tenta enviar o e-mail
+    try {
       await apiPost(`/api/v1/requests/${id}/notify-requester`, {
         message: pendingMessage,
       })
-
       setMessageSent(true)
     } catch (e) {
       console.error(e)
       setSendError("Não foi possível enviar a mensagem ao solicitante.")
+      setIsSendingMessage(false)
+      return
+    }
+
+    // 2) Depois tenta atualizar o status para WAITING_CLIENT
+    try {
+      await apiPut(`/api/v1/requests/${id}/status`, { status: "WAITING_CLIENT" })
+      const updated = await apiGet<ApiRequest>(`/api/v1/requests/${id}`)
+      setReq(updated)
+    } catch (e) {
+      console.error(e)
+      setSendError(
+        "Mensagem enviada com sucesso, mas não foi possível atualizar o status para 'Aguardando cliente'. " +
+        "Verifique se o enum RequestStatus no backend já contém o valor WAITING_CLIENT."
+      )
     } finally {
       setIsSendingMessage(false)
     }
@@ -301,7 +328,6 @@ Para finalizar a tramitação de número ${numero}, será necessário substituir
                 </CardContent>
               </Card>
 
-              {/* Se quiser manter aviso de pendências (só informativo após gerar) */}
               {nonSequential.length > 0 && (
                 <Card className="neon-border">
                   <CardHeader>

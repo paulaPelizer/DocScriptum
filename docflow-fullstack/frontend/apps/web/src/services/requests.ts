@@ -1,3 +1,4 @@
+// src/services/requests.ts
 import { apiGet, apiPost } from "@/services/api"
 
 /* =========================
@@ -7,6 +8,8 @@ import { apiGet, apiPost } from "@/services/api"
 export type RequestStatus =
   | "PENDING"
   | "IN_PROGRESS"
+  | "WAITING_CLIENT"
+  | "WAITING_ADM"
   | "COMPLETED"
   | "REJECTED"
   | "CANCELLED"
@@ -70,6 +73,11 @@ export interface CreateRequestDTO {
   metadataJson?: string
 }
 
+/**
+ * Atenção: o backend hoje devolve bem mais campos em RequestResponseDTO,
+ * mas aqui tipamos apenas o mínimo que já está sendo usado.
+ * Campos extras vindos da API são ignorados pelo TS sem problema.
+ */
 export interface RequestResponseDTO {
   id: number
   requestNumber: string
@@ -81,8 +89,12 @@ export interface RequestResponseDTO {
 
 /** POST /api/v1/requests */
 export async function createRequest(body: CreateRequestDTO) {
-  // 🔧 ajuste principal: incluir o /api/v1 aqui também
   return apiPost<RequestResponseDTO>("/api/v1/requests", body)
+}
+
+/** GET /api/v1/requests/{id} – detalhe de uma solicitação */
+export async function getRequest(id: number) {
+  return apiGet<RequestResponseDTO>(`/api/v1/requests/${id}`)
 }
 
 /** GET /api/v1/requests — 1 status por chamada (paginado no backend) */
@@ -106,7 +118,7 @@ export async function listRequests(params?: {
 /**
  * Combina resultados de múltiplos status (merge client-side).
  * Útil para as abas:
- *  - Pendentes: PENDING + IN_PROGRESS
+ *  - Ativas: PENDING + IN_PROGRESS + WAITING_CLIENT + WAITING_ADM
  *  - Concluídas: COMPLETED + REJECTED + CANCELLED
  */
 export async function listRequestsManyStatuses(params: {
@@ -170,6 +182,8 @@ export async function listRequestsManyStatuses(params: {
 
 /** Grupos de status usados nas abas do frontend */
 export const REQUEST_STATUS_GROUPS = {
-  pending: ["PENDING", "IN_PROGRESS"] as RequestStatus[],
+  // Ativas (inclui Aguardando Cliente e Aguardando ADM)
+  pending: ["PENDING", "IN_PROGRESS", "WAITING_CLIENT", "WAITING_ADM"] as RequestStatus[],
+  // Finalizadas
   done: ["COMPLETED", "REJECTED", "CANCELLED"] as RequestStatus[],
 }

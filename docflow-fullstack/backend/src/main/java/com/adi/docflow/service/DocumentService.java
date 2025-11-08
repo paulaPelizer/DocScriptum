@@ -2,15 +2,21 @@ package com.adi.docflow.service;
 
 import com.adi.docflow.model.Document;
 import com.adi.docflow.model.Project;
+import com.adi.docflow.model.Request;
+import com.adi.docflow.model.RequestDocument;
+import com.adi.docflow.model.RequestStatus;
 import com.adi.docflow.repository.*;
+
 import com.adi.docflow.web.dto.*;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -20,8 +26,12 @@ public class DocumentService {
     private final ProjectLookupRepository projectLookupRepository;
     private final DisciplineLookupRepository disciplineLookupRepository;
     private final DocTypeLookupRepository docTypeLookupRepository;
-    private final DocumentRepository documentRepository;   // já existia
-    private final ProjectRepository projectRepository;     // já existia
+    private final DocumentRepository documentRepository;
+    private final ProjectRepository projectRepository;
+
+    // novos: para achar Requests ligadas ao documento
+    private final RequestDocumentRepository requestDocumentRepository;
+    private final RequestRepository requestRepository;
 
     private static final DateTimeFormatter BR = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
@@ -107,24 +117,75 @@ public class DocumentService {
         // aplica TODOS os campos do DTO, com normalizações seguras
         applyDtoToEntity(dto, doc);
 
+        // garante edit_count inicial
+        if (doc.getEditCount() == null) {
+            doc.setEditCount(0);
+        }
+
+        // se não veio hash, gera um base
+        if (isBlank(doc.getUploadHash())) {
+            String base = UUID.randomUUID().toString().replace("-", "");
+            doc.setUploadHash(base + "_0");
+        }
+
         return documentRepository.save(doc);
     }
 
     /**
-     * (Opcional/futuro) Atualiza parcialmente um documento existente.
-     * Não é chamado pelos endpoints atuais — mantém compatibilidade.
+     * Atualiza parcialmente um documento existente.
+     * Também propaga a nova hash/edit_count para request_document
+     * e atualiza o status das Requests ligadas (WAITING_CLIENT → WAITING_ADM).
      */
     public Document updateDocument(Long id, CreateDocumentDTO dto) {
+        if (dto == null) {
+            throw new IllegalArgumentException("DTO não pode ser nulo.");
+        }
+
         Document doc = documentRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Documento não encontrado: " + id));
 
-        if (dto.projectId() != null) {
+        // Guarda a hash atual para extrair o "base"
+        String currentHash = doc.getUploadHash();
+        String baseHash = !isBlank(currentHash) ? extractBaseHash(currentHash) : null;
+
+        // Troca de projeto, se necessário
+        if (dto.projectId() != null &&
+                !dto.projectId().equals(doc.getProject() != null ? doc.getProject().getId() : null)) {
             Project projectRef = projectRepository.getReferenceById(dto.projectId());
             doc.setProject(projectRef);
         }
 
+        // Aplica todos os demais campos
         applyDtoToEntity(dto, doc);
-        return documentRepository.save(doc);
+
+        // Incrementa contador de edições
+        Integer current = doc.getEditCount();
+        if (current == null) current = 0;
+        int nextEdit = current + 1;
+        doc.setEditCount(nextEdit);
+
+        // Atualiza a hash mantendo a parte base
+        if (!isBlank(baseHash)) {
+            doc.setUploadHash(baseHash + "_" + nextEdit);
+        } else if (!isBlank(doc.getUploadHash())) {
+            // se por algum motivo não tinha baseHash, extrai da atual
+            String base = extractBaseHash(doc.getUploadHash());
+            doc.setUploadHash(base + "_" + nextEdit);
+        }
+
+        // Atualiza timestamp
+        doc.setUpdatedAt(java.time.Instant.now());
+
+        // Salva o documento
+        Document saved = documentRepository.save(doc);
+
+        // 🔹 Atualiza o snapshot na request_document
+        syncRequestDocumentSnapshot(saved);
+
+        // 🔹 Atualiza o status das Requests ligadas (WAITING_CLIENT → WAITING_ADM)
+        propagateDocumentUpdateToRequests(saved.getId());
+
+        return saved;
     }
 
     // ------------------------- Helpers -------------------------
@@ -147,14 +208,14 @@ public class DocumentService {
         if (dto.pages() != null)            doc.setPages(dto.pages());
         if (!isBlank(dto.fileUrl()))        doc.setFileUrl(dto.fileUrl().trim());
 
-        // Status (mantém default atual "PLANNED" se não vier nada)
+        // Status
         if (!isBlank(dto.status())) {
             doc.setStatus(dto.status().trim());
         } else if (doc.getStatus() == null) {
             doc.setStatus("PLANNED");
         }
 
-        // Campos descritivos e técnicos
+        // Descritivos
         if (!isBlank(dto.species()))                 doc.setSpecies(dto.species().trim());
         if (!isBlank(dto.description()))             doc.setDescription(dto.description().trim());
         if (!isBlank(dto.layoutRef()))               doc.setLayoutRef(dto.layoutRef().trim());
@@ -162,11 +223,59 @@ public class DocumentService {
         if (!isBlank(dto.technicalResponsible()))    doc.setTechnicalResponsible(dto.technicalResponsible().trim());
         if (!isBlank(dto.currentLocation()))         doc.setCurrentLocation(dto.currentLocation().trim());
         if (!isBlank(dto.remarks()))                 doc.setRemarks(dto.remarks().trim());
+
+        // uploadHash: sempre que vier alguma coisa, atualiza
         if (!isBlank(dto.uploadHash()))              doc.setUploadHash(dto.uploadHash().trim());
 
-        // Datas (dd/MM/yyyy)
+        // Datas
         if (!isBlank(dto.performedDate())) doc.setPerformedDate(parseDate(dto.performedDate()));
         if (!isBlank(dto.dueDate()))       doc.setDueDate(parseDate(dto.dueDate()));
+    }
+
+    /**
+     * Atualiza os campos de snapshot em request_document
+     * (doc_upload_hash, doc_edit_count) com base no Document salvo.
+     */
+    private void syncRequestDocumentSnapshot(Document doc) {
+        if (doc.getId() == null) return;
+
+        List<RequestDocument> links = requestDocumentRepository.findByDocumentId(doc.getId());
+        if (links.isEmpty()) return;
+
+        for (RequestDocument rd : links) {
+            rd.setDocUploadHash(doc.getUploadHash());
+            rd.setDocEditCount(doc.getEditCount());
+        }
+        requestDocumentRepository.saveAll(links);
+    }
+
+    /**
+     * Atualiza Requests ligadas ao documento:
+     * se estiverem em WAITING_CLIENT, vão para WAITING_ADM.
+     */
+    private void propagateDocumentUpdateToRequests(Long documentId) {
+        List<RequestDocument> links = requestDocumentRepository.findByDocumentId(documentId);
+        if (links.isEmpty()) return;
+
+        OffsetDateTime now = OffsetDateTime.now();
+
+        for (RequestDocument rd : links) {
+            Request r = rd.getRequest();
+            if (r == null) continue;
+
+            if (r.getStatus() == RequestStatus.WAITING_CLIENT) {
+                r.setStatus(RequestStatus.WAITING_ADM);
+                r.setUpdatedAt(now);
+                requestRepository.save(r);
+            }
+        }
+    }
+
+    private String extractBaseHash(String hash) {
+        if (hash == null) return null;
+        int idx = hash.indexOf('_');
+        if (idx <= 0) return hash;
+        return hash.substring(0, idx);
     }
 
     // Utilitário para converter datas opcionais

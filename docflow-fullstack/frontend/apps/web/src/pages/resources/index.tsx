@@ -1,5 +1,5 @@
 // src/pages/resources/index.tsx
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import AppHeader from "@/components/AppHeader";
@@ -34,6 +34,8 @@ import {
   X,
 } from "lucide-react";
 
+import { apiGet } from "@/services/api";
+
 /** ==== Tipos ==== */
 type OrgType = "client" | "supplier" | "internal";
 
@@ -52,77 +54,6 @@ type Resource = {
   tags?: string[];
 };
 
-/** ==== Mock de dados ==== */
-const MOCK_RESOURCES: Resource[] = [
-  {
-    id: 1,
-    name: "Ana Souza",
-    role: "Doc Control",
-    email: "ana.souza@empresaabc.com",
-    phone: "(11) 98888-0001",
-    orgType: "client",
-    orgName: "Empresa ABC",
-    projects: [
-      { id: 101, name: "Projeto Alpha" },
-      { id: 102, name: "Expansão Sede" },
-    ],
-    requests: [{ id: 5001, number: "REQ-2025-001" }],
-    documents: [{ id: 9001, code: "DWG-ALP-001", status: "Em revisão" }],
-    status: "Ativo",
-    tags: ["técnico", "arquivos"],
-  },
-  {
-    id: 2,
-    name: "Bruno Lima",
-    role: "Eng. Projetista",
-    email: "bruno.lima@construtoraxyz.com",
-    phone: "(11) 97777-2222",
-    orgType: "supplier",
-    orgName: "Construtora XYZ",
-    projects: [{ id: 101, name: "Projeto Alpha" }],
-    requests: [
-      { id: 5001, number: "REQ-2025-001" },
-      { id: 5002, number: "REQ-2025-002" },
-    ],
-    documents: [
-      { id: 9002, code: "PDF-ALP-010", status: "Aguardando cliente" },
-      { id: 9003, code: "XLS-ALP-011", status: "Concluído" },
-    ],
-    status: "Ativo",
-    tags: ["projeto", "entregas"],
-  },
-  {
-    id: 3,
-    name: "Carla Neri",
-    role: "QA / Compliance",
-    email: "carla.neri@industria123.com",
-    phone: "(31) 91234-5678",
-    orgType: "client",
-    orgName: "Indústria 123",
-    projects: [{ id: 103, name: "Reforma Unidade 3" }],
-    requests: [],
-    documents: [{ id: 9010, code: "MEM-IND-003", status: "Em revisão" }],
-    status: "Inativo",
-    tags: ["qualidade", "compliance"],
-  },
-  {
-    id: 4,
-    name: "Diego Martins",
-    role: "Analista Interno",
-    email: "diego.martins@minhaempresa.com",
-    orgType: "internal",
-    orgName: "DocScriptum",
-    projects: [
-      { id: 101, name: "Projeto Alpha" },
-      { id: 104, name: "Projeto Beta" },
-    ],
-    requests: [{ id: 5003, number: "REQ-2025-003" }],
-    documents: [{ id: 9050, code: "REL-BETA-001", status: "Concluído" }],
-    status: "Ativo",
-    tags: ["interno", "suporte"],
-  },
-];
-
 /** ==== Utilidades ==== */
 const FILTER_OPTIONS = [
   { key: "name", label: "Nome" },
@@ -136,7 +67,7 @@ const FILTER_OPTIONS = [
   { key: "status", label: "Status" },
   { key: "tags", label: "Tags" },
 ] as const;
-type FilterKey = typeof FILTER_OPTIONS[number]["key"];
+type FilterKey = (typeof FILTER_OPTIONS)[number]["key"];
 
 function norm(s: string | null | undefined) {
   return (s ?? "")
@@ -151,12 +82,79 @@ function statusVariant(s?: Resource["status"]) {
   return v === "ativo" ? "default" : "secondary";
 }
 
+// mapeia o DTO do backend => Resource da UI
+function mapResourceFromApi(raw: any): Resource {
+  const typeStr = String(raw.partnershipType ?? "").toUpperCase();
+  const orgType: OrgType =
+    typeStr === "SUPPLIER"
+      ? "supplier"
+      : typeStr === "INTERNAL"
+      ? "internal"
+      : "client";
+
+  const statusStr = String(raw.status ?? "").toUpperCase();
+  const status: "Ativo" | "Inativo" | undefined =
+    statusStr === "ATIVO" ? "Ativo" : statusStr === "INATIVO" ? "Inativo" : undefined;
+
+  return {
+    id: Number(raw.id),
+    name: String(raw.name ?? ""),
+    role: String(raw.role ?? ""),
+    email: String(raw.email ?? ""),
+    phone: raw.phone ?? null,
+    orgType,
+    orgName: raw.partnershipName ?? null,
+    status,
+    tags: Array.isArray(raw.tags) ? raw.tags : [],
+    // por enquanto sem vínculos reais
+    projects: [],
+    requests: [],
+    documents: [],
+  };
+}
+
 export default function ResourcesPage() {
   const navigate = useNavigate();
+
+  const [resources, setResources] = useState<Resource[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const [q, setQ] = useState("");
   const ALL_FIELDS = FILTER_OPTIONS.map((o) => o.key) as FilterKey[];
   const [selectedFields, setSelectedFields] = useState<FilterKey[]>(ALL_FIELDS);
+
+  // carrega do backend
+  useEffect(() => {
+    let aborted = false;
+
+    (async () => {
+      try {
+        setLoading(true);
+        setLoadError(null);
+
+        const data = await apiGet<any[]>("/api/v1/resources");
+        const arr = Array.isArray(data) ? data : [];
+
+        const mapped = arr.map(mapResourceFromApi);
+        if (!aborted) {
+          setResources(mapped);
+        }
+      } catch (e) {
+        console.error("Falha ao carregar recursos:", e);
+        if (!aborted) {
+          setLoadError("Não foi possível carregar os recursos.");
+          setResources([]);
+        }
+      } finally {
+        if (!aborted) setLoading(false);
+      }
+    })();
+
+    return () => {
+      aborted = true;
+    };
+  }, []);
 
   const fieldValue = (r: Resource, key: FilterKey): string => {
     switch (key) {
@@ -192,10 +190,11 @@ export default function ResourcesPage() {
 
   const rows = useMemo(() => {
     const query = norm(q);
-    if (!query) return MOCK_RESOURCES;
+    const source = resources;
+    if (!query) return source;
     const fields = selectedFields.length ? selectedFields : ALL_FIELDS;
-    return MOCK_RESOURCES.filter((r) => fields.some((f) => fieldValue(r, f).includes(query)));
-  }, [q, selectedFields]);
+    return source.filter((r) => fields.some((f) => fieldValue(r, f).includes(query)));
+  }, [q, selectedFields, resources]);
 
   const toggleField = (key: FilterKey, checked: boolean) => {
     setSelectedFields((prev) =>
@@ -274,12 +273,19 @@ export default function ResourcesPage() {
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              {/* Redireciona para /resources/new */}
+              {/* Novo recurso */}
               <Button onClick={() => navigate("/resources/new")} aria-label="Criar novo recurso">
                 <Plus className="mr-2 h-4 w-4" /> Novo Recurso
               </Button>
             </div>
           </PageHeader>
+
+          {loading && (
+            <p className="text-sm text-muted-foreground mb-2">Carregando recursos...</p>
+          )}
+          {loadError && (
+            <p className="text-sm text-red-500 mb-2">{loadError}</p>
+          )}
 
           <ResourceTable rows={rows} />
         </div>
@@ -321,112 +327,112 @@ function ResourceTable({ rows }: { rows: Resource[] }) {
             </TableRow>
           </TableHeader>
 
-        <TableBody>
-          {rows.map((r) => (
-            <TableRow key={r.id} className="align-top">
-              <TableCell className="leading-tight font-medium">
-                <div className="flex items-start gap-2">
-                  <User2 className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
-                  <div className="min-w-0">
-                    <div className="truncate">{r.name}</div>
-                    <div className="text-[11px] text-muted-foreground truncate">
-                      {r.tags?.slice(0, 2).join(", ")}
+          <TableBody>
+            {rows.map((r) => (
+              <TableRow key={r.id} className="align-top">
+                <TableCell className="leading-tight font-medium">
+                  <div className="flex items-start gap-2">
+                    <User2 className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+                    <div className="min-w-0">
+                      <div className="truncate">{r.name}</div>
+                      <div className="text-[11px] text-muted-foreground truncate">
+                        {r.tags?.slice(0, 2).join(", ")}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </TableCell>
+                </TableCell>
 
-              <TableCell className="truncate">{r.role}</TableCell>
+                <TableCell className="truncate">{r.role}</TableCell>
 
-              <TableCell className="leading-tight">
-                <div className="flex items-center gap-2 min-w-0">
-                  <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                  <span className="text-xs truncate">{r.email}</span>
-                </div>
-                {r.phone && (
-                  <div className="flex items-center gap-2 min-w-0 mt-0.5">
-                    <Phone className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                    <span className="text-xs truncate">{r.phone}</span>
+                <TableCell className="leading-tight">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    <span className="text-xs truncate">{r.email}</span>
                   </div>
-                )}
-              </TableCell>
+                  {r.phone && (
+                    <div className="flex items-center gap-2 min-w-0 mt-0.5">
+                      <Phone className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      <span className="text-xs truncate">{r.phone}</span>
+                    </div>
+                  )}
+                </TableCell>
 
-              <TableCell className="leading-tight">
-                <div className="flex items-start gap-2 min-w-0">
-                  <Building2 className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                  <div className="min-w-0">
-                    <div className="truncate">{r.orgName ?? "—"}</div>
-                    <div className="text-[11px] text-muted-foreground">
-                      {labelByOrg[r.orgType]}
+                <TableCell className="leading-tight">
+                  <div className="flex items-start gap-2 min-w-0">
+                    <Building2 className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                    <div className="min-w-0">
+                      <div className="truncate">{r.orgName ?? "—"}</div>
+                      <div className="text-[11px] text-muted-foreground">
+                        {labelByOrg[r.orgType]}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </TableCell>
+                </TableCell>
 
-              <TableCell>
-                <div className="flex items-center gap-1.5">
-                  <FolderKanban className="h-4 w-4 text-muted-foreground" />
-                  <span>{r.projects?.length ?? 0}</span>
-                </div>
-              </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-1.5">
+                    <FolderKanban className="h-4 w-4 text-muted-foreground" />
+                    <span>{r.projects?.length ?? 0}</span>
+                  </div>
+                </TableCell>
 
-              <TableCell className="hidden lg:table-cell">
-                <div className="flex items-center gap-1.5">
-                  <GitPullRequest className="h-4 w-4 text-muted-foreground" />
-                  <span>{r.requests?.length ?? 0}</span>
-                </div>
-              </TableCell>
+                <TableCell className="hidden lg:table-cell">
+                  <div className="flex items-center gap-1.5">
+                    <GitPullRequest className="h-4 w-4 text-muted-foreground" />
+                    <span>{r.requests?.length ?? 0}</span>
+                  </div>
+                </TableCell>
 
-              <TableCell className="hidden lg:table-cell">
-                <div className="flex items-center gap-1.5">
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                  <span>{r.documents?.length ?? 0}</span>
-                </div>
-              </TableCell>
+                <TableCell className="hidden lg:table-cell">
+                  <div className="flex items-center gap-1.5">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <span>{r.documents?.length ?? 0}</span>
+                  </div>
+                </TableCell>
 
-              <TableCell>
-                <Badge variant={statusVariant(r.status) as any} className="px-2 py-0 h-6">
-                  {r.status ?? "—"}
-                </Badge>
-              </TableCell>
+                <TableCell>
+                  <Badge variant={statusVariant(r.status) as any} className="px-2 py-0 h-6">
+                    {r.status ?? "—"}
+                  </Badge>
+                </TableCell>
 
-              <TableCell className="text-right">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem asChild>
-                      <Link to={`/resources/${r.id}`}>Ver detalhes</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link to={`/resources/${r.id}/edit`}>Editar</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link to={`/projects?resource=${r.id}`}>Ver projetos</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link to={`/requests?resource=${r.id}`}>Ver solicitações</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link to={`/documents?resource=${r.id}`}>Ver documentos</Link>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            </TableRow>
-          ))}
-          {rows.length === 0 && (
-            <TableRow>
-              <TableCell colSpan={9} className="text-center py-6 text-muted-foreground">
-                Nenhum recurso encontrado.
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
+                <TableCell className="text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem asChild>
+                        <Link to={`/resources/${r.id}`}>Ver detalhes</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to={`/resources/${r.id}/edit`}>Editar</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <Link to={`/projects?resource=${r.id}`}>Ver projetos</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to={`/requests?resource=${r.id}`}>Ver solicitações</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to={`/documents?resource=${r.id}`}>Ver documentos</Link>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            ))}
+            {rows.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={9} className="text-center py-6 text-muted-foreground">
+                  Nenhum recurso encontrado.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
         </Table>
       </CardContent>
     </Card>

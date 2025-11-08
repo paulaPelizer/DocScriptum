@@ -138,30 +138,43 @@ export default function RequestsPage() {
 
   // status badge
   const StatusBadge = ({ s }: { s: RequestStatus }) => {
-    const label =
-      s === "PENDING"
-        ? "Pendente"
-        : s === "IN_PROGRESS"
-        ? "Em análise"
-        : s === "COMPLETED"
-        ? "Concluída"
-        : s === "REJECTED"
-        ? "Rejeitada"
-        : "Cancelada"
+  let label: string
+  let variant: "outline" | "secondary" | "default" | "destructive"
 
-    const variant =
-      s === "PENDING"
-        ? "outline"
-        : s === "IN_PROGRESS"
-        ? "secondary"
-        : s === "COMPLETED"
-        ? "default"
-        : s === "REJECTED"
-        ? "destructive"
-        : "secondary"
-
-    return <Badge variant={variant as any}>{label}</Badge>
+  switch (s) {
+    case "PENDING":
+      label = "Pendente"
+      variant = "outline"
+      break
+    case "IN_PROGRESS":
+      label = "Em análise"
+      variant = "secondary"
+      break
+    case "WAITING_CLIENT":
+      label = "Aguardando cliente"
+      variant = "secondary"
+      break
+    case "WAITING_ADM":
+      label = "Aguardando adm."
+      variant = "secondary"
+      break
+    case "COMPLETED":
+      label = "Concluída"
+      variant = "default"
+      break
+    case "REJECTED":
+      label = "Rejeitada"
+      variant = "destructive"
+      break
+    case "CANCELLED":
+    default:
+      label = "Cancelada"
+      variant = "secondary"
+      break
   }
+
+  return <Badge variant={variant}>{label}</Badge>
+}
 
   const fmtDate = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString() : "—")
 

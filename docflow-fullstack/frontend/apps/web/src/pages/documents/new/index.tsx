@@ -485,7 +485,7 @@ export default function NewDocumentPage() {
           const m = String(templateId || "").match(/(\d+)/);
           return m ? Number(m[1]) : null;
         })(),
-        ...(isEdit ? {} : { uploadHash: `fake-${crypto.randomUUID()}` }),
+        // ❌ NADA de uploadHash aqui – backend cuida disso
       };
 
       setIsLoading(true);
@@ -548,7 +548,7 @@ export default function NewDocumentPage() {
                   </Select>
                 </div>
 
-                {/* Disciplina (sempre editável, com valor pré-selecionado se existir) */}
+                {/* Disciplina */}
                 <div className="space-y-2">
                   <Label>Disciplina</Label>
                   <Select
@@ -573,7 +573,7 @@ export default function NewDocumentPage() {
                   </Select>
                 </div>
 
-                {/* Tipo de Documento (sempre editável, com valor pré-selecionado se existir) */}
+                {/* Tipo de Documento */}
                 <div className="space-y-2">
                   <Label>Tipo de Documento</Label>
                   <Select
@@ -606,7 +606,7 @@ export default function NewDocumentPage() {
                   </Select>
                 </div>
 
-                {/* Layout (mock) */}
+                {/* Layout */}
                 <div className="space-y-2">
                   <Label>Layout (ISO/Referência)</Label>
                   <Select value={layoutId} onValueChange={setLayoutId} disabled={!projectId}>
@@ -619,7 +619,7 @@ export default function NewDocumentPage() {
                   </Select>
                 </div>
 
-                {/* Template (mock) */}
+                {/* Template */}
                 <div className="space-y-2">
                   <Label>Template</Label>
                   <Select value={templateId} onValueChange={setTemplateId} disabled={!projectId}>

@@ -33,9 +33,15 @@ const PageDashboard = React.lazy(() => import("@/pages/dashboard/index"));
 /** DOCUMENTOS */
 const PageDocs = React.lazy(() => import("@/pages/documents/index"));
 const PageDocsNew = React.lazy(() => import("@/pages/documents/new/index"));
-const PageDocsRoutingNew = React.lazy(() => import("@/pages/documents/routing/new/index"));
-const PageDocsRoutingGrd = React.lazy(() => import("@/pages/documents/routing/[id]/grd/index"));
-const PageDocumentDetail = React.lazy(() => import("@/pages/documents/[id]/index"));
+const PageDocsRoutingNew = React.lazy(
+  () => import("@/pages/documents/routing/new/index")
+);
+const PageDocsRoutingGrd = React.lazy(
+  () => import("@/pages/documents/routing/[id]/grd/index")
+);
+const PageDocumentDetail = React.lazy(
+  () => import("@/pages/documents/[id]/index")
+);
 
 /** GRDs / PLANEJAMENTO */
 const PageGrds = React.lazy(() => import("@/pages/grds/index"));
@@ -45,39 +51,60 @@ const PagePlanning = React.lazy(() => import("@/pages/planning/index"));
 const PageProjects = React.lazy(() => import("@/pages/projects/index"));
 const PageProjectsEdit = React.lazy(() => import("@/pages/projects/edit/index"));
 const PageProjectsNew = React.lazy(() => import("@/pages/projects/new/index"));
-const PageProjectDetail = React.lazy(() => import("@/pages/projects/[id]/index"));
-const PageProjectDocs = React.lazy(() => import("@/pages/projects/[id]/documents/index"));
-const PageProjectEdit = React.lazy(() => import("@/pages/projects/[id]/edit/index"));
-const PageProjectPlanning = React.lazy(() => import("@/pages/projects/[id]/planning/index"));
-const PageProjectRouting = React.lazy(() => import("@/pages/projects/[id]/routing/index"));
+const PageProjectDetail = React.lazy(
+  () => import("@/pages/projects/[id]/index")
+);
+const PageProjectDocs = React.lazy(
+  () => import("@/pages/projects/[id]/documents/index")
+);
+const PageProjectEdit = React.lazy(
+  () => import("@/pages/projects/[id]/edit/index")
+);
+const PageProjectPlanning = React.lazy(
+  () => import("@/pages/projects/[id]/planning/index")
+);
+const PageProjectRouting = React.lazy(
+  () => import("@/pages/projects/[id]/routing/index")
+);
 
 /** SOLICITAÇÕES */
 const PageRequests = React.lazy(() => import("@/pages/requests/index"));
-const PageRequestsAttend = React.lazy(() => import("@/pages/requests/attend/index"));
+const PageRequestsAttend = React.lazy(
+  () => import("@/pages/requests/attend/index")
+);
 const PageRequestsAttendGenGrds = React.lazy(
   () => import("@/pages/requests/attend/generate-grds/index")
 );
 const PageRequestsNew = React.lazy(() => import("@/pages/requests/new/index"));
-const PageRequestsTender = React.lazy(() => import("@/pages/requests/tender/index"));
+const PageRequestsTender = React.lazy(
+  () => import("@/pages/requests/tender/index")
+);
 const PageRequestsTenderGenGrds = React.lazy(
   () => import("@/pages/requests/tender/generate-grds/index")
 );
-const PageRequestDetail = React.lazy(() => import("@/pages/requests/[id]/index"));
-const PageRequestGenGrd = React.lazy(() => import("@/pages/requests/[id]/generate-grd/index"));
+const PageRequestDetail = React.lazy(
+  () => import("@/pages/requests/[id]/index")
+);
+const PageRequestGenGrd = React.lazy(
+  () => import("@/pages/requests/[id]/generate-grd/index")
+);
 
 /** RECURSOS */
 const PageResources = React.lazy(() => import("@/pages/resources/index"));
-const PageResourcesNew = React.lazy(() => import("@/pages/resources/new/index"));
-//const PageResourceDetail = React.lazy(() => import("@/pages/resources/[id]/index"));
-//const PageResourceEdit = React.lazy(() => import("@/pages/resources/[id]/edit/index"));
+const PageResourcesNew = React.lazy(
+  () => import("@/pages/resources/new/index")
+);
+// se/ quando você criar essas páginas, é só descomentar:
+// const PageResourceDetail = React.lazy(() => import("@/pages/resources/[id]/index"));
+// const PageResourceEdit = React.lazy(() => import("@/pages/resources/[id]/edit/index"));
 
 /** MENSAGERIA (NOVO) */
 const PageMensageria = React.lazy(() => import("@/pages/mensageria/index"));
-//const PageMensageriaNew = React.lazy(() => import("@/pages/mensageria/new/index"));
-//const PageMensageriaDetail = React.lazy(() => import("@/pages/mensageria/[id]/index"));
-//const PageMensageriaXML = React.lazy(() => import("@/pages/mensageria/[id]/xml/index"));
-//const PageMensageriaRetorno = React.lazy(() => import("@/pages/mensageria/[id]/retorno/index"));
-//const PageMensageriaReprocess = React.lazy(() => import("@/pages/mensageria/[id]/reprocess/index"));
+// const PageMensageriaNew = React.lazy(() => import("@/pages/mensageria/new/index"));
+// const PageMensageriaDetail = React.lazy(() => import("@/pages/mensageria/[id]/index"));
+// const PageMensageriaXML = React.lazy(() => import("@/pages/mensageria/[id]/xml/index"));
+// const PageMensageriaRetorno = React.lazy(() => import("@/pages/mensageria/[id]/retorno/index"));
+// const PageMensageriaReprocess = React.lazy(() => import("@/pages/mensageria/[id]/reprocess/index"));
 
 // ==========================
 // Definição de rotas
@@ -87,7 +114,7 @@ const routes: RouteObject[] = [
   { path: "/", element: <F><PageHome /></F> },
   { path: "/login", element: <F><PageLogin /></F> },
 
-  // <<< NOVA ROTA PÚBLICA PARA REDEFINIÇÃO DE ACESSO >>>
+  // Reset de acesso
   { path: "/reset-access", element: <F><PageResetAccess /></F> },
 
   // Dashboard
@@ -124,26 +151,32 @@ const routes: RouteObject[] = [
   // Solicitações
   { path: "/requests", element: P(<F><PageRequests /></F>) },
   { path: "/requests/attend", element: P(<F><PageRequestsAttend /></F>) },
-  { path: "/requests/attend/generate-grds", element: P(<F><PageRequestsAttendGenGrds /></F>) },
+  {
+    path: "/requests/attend/generate-grds",
+    element: P(<F><PageRequestsAttendGenGrds /></F>),
+  },
   { path: "/requests/new", element: P(<F><PageRequestsNew /></F>) },
   { path: "/requests/tender", element: P(<F><PageRequestsTender /></F>) },
-  { path: "/requests/tender/generate-grds", element: P(<F><PageRequestsTenderGenGrds /></F>) },
+  {
+    path: "/requests/tender/generate-grds",
+    element: P(<F><PageRequestsTenderGenGrds /></F>),
+  },
   { path: "/requests/:id", element: P(<F><PageRequestDetail /></F>) },
-  { path: "/requests/:id/generate-grd", element: P(<F><PageRequestGenGrd /></F>) },
+  {
+    path: "/requests/:id/generate-grd",
+    element: P(<F><PageRequestGenGrd /></F>),
+  },
 
   // Recursos
   { path: "/resources", element: P(<F><PageResources /></F>) },
   { path: "/resources/new", element: P(<F><PageResourcesNew /></F>) },
-  //{ path: "/resources/:id", element: P(<F><PageResourceDetail /></F>) },
-  //{ path: "/resources/:id/edit", element: P(<F><PageResourceEdit /></F>) },
+  // mesma página usada para edição; ela detecta :id e muda o modo:
+  { path: "/resources/:id/edit", element: P(<F><PageResourcesNew /></F>) },
+  // se você criar página de detalhes depois:
+  // { path: "/resources/:id", element: P(<F><PageResourceDetail /></F>) },
 
   // Mensageria
   { path: "/mensageria", element: P(<F><PageMensageria /></F>) },
-  //{ path: "/mensageria/new", element: P(<F><PageMensageriaNew /></F>) },
-  //{ path: "/mensageria/:id", element: P(<F><PageMensageriaDetail /></F>) },
-  //{ path: "/mensageria/:id/xml", element: P(<F><PageMensageriaXML /></F>) },
-  //{ path: "/mensageria/:id/retorno", element: P(<F><PageMensageriaRetorno /></F>) },
-  //{ path: "/mensageria/:id/reprocess", element: P(<F><PageMensageriaReprocess /></F>) },
 ];
 
 export default routes;

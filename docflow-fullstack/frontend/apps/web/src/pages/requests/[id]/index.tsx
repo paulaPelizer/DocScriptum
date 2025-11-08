@@ -17,7 +17,16 @@ import { apiGet, apiPut } from "@/services/api"
 type ApiOrganization = { id: number; name: string | null }
 type ApiProject = { id: number; code?: string | null; name?: string | null }
 type ApiDocument = { id: number; code?: string | null; title?: string | null; revision?: string | null }
-type ApiStatus = "PENDING" | "IN_PROGRESS" | "COMPLETED" | "REJECTED" | "CANCELLED"
+
+/** 🔹 Inclui WAITING_CLIENT corretamente */
+type ApiStatus =
+  | "PENDING"
+  | "IN_PROGRESS"
+  | "WAITING_CLIENT"
+  | "COMPLETED"
+  | "REJECTED"
+  | "CANCELLED"
+
 type ApiRequest = {
   id: number
   requestNumber: string
@@ -48,21 +57,36 @@ function priorityToBadge(p: UiPriority): BadgeVariant {
   if (p === "Normal") return "secondary"
   return "outline"
 }
-const formatDate = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString() : "—")
+
+const formatDate = (iso?: string | null) =>
+  iso ? new Date(iso).toLocaleDateString() : "—"
+
+/** 🔹 Incluído texto para WAITING_CLIENT */
 const uiStatus = (s?: ApiStatus) => {
   switch (s) {
-    case "PENDING": return "Pendente"
-    case "IN_PROGRESS": return "Em análise"
-    case "COMPLETED": return "Concluída"
-    case "REJECTED": return "Rejeitada"
-    case "CANCELLED": return "Cancelada"
-    default: return "—"
+    case "PENDING":
+      return "Pendente"
+    case "IN_PROGRESS":
+      return "Em análise"
+    case "WAITING_CLIENT":
+      return "Aguardando cliente"
+    case "COMPLETED":
+      return "Concluída"
+    case "REJECTED":
+      return "Rejeitada"
+    case "CANCELLED":
+      return "Cancelada"
+    default:
+      return "—"
   }
 }
+
+/** 🔹 WAITING_CLIENT no mesmo ícone de pendente/análise */
 const statusIcon = (s?: ApiStatus) => {
   switch (s) {
     case "PENDING":
     case "IN_PROGRESS":
+    case "WAITING_CLIENT":
       return <AlertCircle className="h-4 w-4 text-yellow-500" aria-hidden />
     case "COMPLETED":
       return <CheckCircle className="h-4 w-4 text-green-500" aria-hidden />
@@ -153,7 +177,9 @@ export default function RequestDetailPage() {
       }
     }
     fetchData()
-    return () => { abort = true }
+    return () => {
+      abort = true
+    }
   }, [id])
 
   const documents = useMemo(
@@ -243,27 +269,36 @@ export default function RequestDetailPage() {
                       <Badge variant="outline">{uiStatus(req.status)}</Badge>
                     </div>
                   </div>
-                  <CardDescription className="sr-only">Status e prioridade da solicitação</CardDescription>
+                  <CardDescription className="sr-only">
+                    Status e prioridade da solicitação
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
                       <Label className="text-sm font-medium text-muted-foreground">Projeto</Label>
-                      <p className="font-medium">{projectCode}{projectName}</p>
+                      <p className="font-medium">
+                        {projectCode}
+                        {projectName}
+                      </p>
                     </div>
                     <div>
                       <Label className="text-sm font-medium text-muted-foreground">Propósito</Label>
                       <p className="font-medium">{req.purpose ?? "—"}</p>
                     </div>
                     <div>
-                      <Label className="text-sm font-medium text-muted-foreground">Data da Solicitação</Label>
+                      <Label className="text-sm font-medium text-muted-foreground">
+                        Data da Solicitação
+                      </Label>
                       <p className="flex items-center gap-2">
                         <Calendar className="h-4 w-4 text-muted-foreground" aria-hidden />
                         {formatDate(req.requestDate)}
                       </p>
                     </div>
                     <div>
-                      <Label className="text-sm font-medium text-muted-foreground">Retorno Esperado</Label>
+                      <Label className="text-sm font-medium text-muted-foreground">
+                        Retorno Esperado
+                      </Label>
                       <p className="flex items-center gap-2">
                         <Calendar className="h-4 w-4 text-muted-foreground" aria-hidden />
                         {formatDate(req.deadline)}
@@ -291,12 +326,18 @@ export default function RequestDetailPage() {
                     <div>
                       <Label className="text-sm font-medium text-muted-foreground">Solicitante</Label>
                       <p className="font-medium">{originName}</p>
-                      <p className="text-sm text-muted-foreground">{req.requesterContact ?? ""}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {req.requesterContact ?? ""}
+                      </p>
                     </div>
                     <div>
-                      <Label className="text-sm font-medium text-muted-foreground">Destinatário</Label>
+                      <Label className="text-sm font-medium text-muted-foreground">
+                        Destinatário
+                      </Label>
                       <p className="font-medium">{destinationName}</p>
-                      <p className="text-sm text-muted-foreground">{req.targetContact ?? ""}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {req.targetContact ?? ""}
+                      </p>
                     </div>
                   </div>
                 </CardContent>
@@ -312,11 +353,16 @@ export default function RequestDetailPage() {
                 </CardHeader>
                 <CardContent>
                   {documents.length === 0 ? (
-                    <div className="text-sm text-muted-foreground">Nenhum documento vinculado.</div>
+                    <div className="text-sm text-muted-foreground">
+                      Nenhum documento vinculado.
+                    </div>
                   ) : (
                     <div className="space-y-3">
                       {documents.map((doc) => (
-                        <div key={doc.id} className="flex items-center justify-between rounded-lg border p-3">
+                        <div
+                          key={doc.id}
+                          className="flex items-center justify-between rounded-lg border p-3"
+                        >
                           <div>
                             <p className="font-medium">
                               {doc.code} — {doc.name}
@@ -328,7 +374,11 @@ export default function RequestDetailPage() {
                             {/* Indicador de qualidade (mock por quartis) */}
                             <QualityGlyph q={doc.quality} />
 
-                            <Button variant="outline" size="sm" aria-label={`Visualizar ${doc.code}`}>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              aria-label={`Visualizar ${doc.code}`}
+                            >
                               Visualizar
                             </Button>
                           </div>
@@ -340,11 +390,17 @@ export default function RequestDetailPage() {
               </Card>
 
               {/* Atendimento da Solicitação */}
-              {(req.status === "PENDING" || req.status === "IN_PROGRESS") && (
-                <Card className="neon-border">
+              {(
+                  req.status === "PENDING" ||
+                  req.status === "IN_PROGRESS" ||
+                  req.status === "WAITING_CLIENT"
+                ) && (
+                  <Card className="neon-border">
                   <CardHeader>
                     <CardTitle>Atendimento da Solicitação</CardTitle>
-                    <CardDescription>Analise a solicitação e tome uma decisão</CardDescription>
+                    <CardDescription>
+                      Analise a solicitação e tome uma decisão
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">

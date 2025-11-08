@@ -21,6 +21,7 @@ public interface RequestDocumentRepository extends JpaRepository<RequestDocument
            order by d.code asc
            """)
     List<Document> findDocumentsByRequestId(@Param("requestId") Long requestId);
+    List<RequestDocument> findByDocumentId(Long documentId);
 
     /** Total de páginas (assumindo campo pages em Document; ajuste o nome se preciso). */
     @Query("""

@@ -188,7 +188,7 @@ export default function LoginPage() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="admin@docflow"
-                className="bg-white/70 text-foreground placeholder:text-muted-foreground"
+                className="bg-white/90 text-slate-900 placeholder:text-slate-500 border border-white/40"
               />
             </div>
 
@@ -202,7 +202,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="bg-white/70 text-foreground placeholder:text-muted-foreground"
+                className="bg-white/90 text-slate-900 placeholder:text-slate-500 border border-white/40"
               />
             </div>
 
@@ -279,7 +279,7 @@ export default function LoginPage() {
                   type="text"
                   value={regToken}
                   onChange={(e) => setRegToken(e.target.value)}
-                  className="bg-white/80 text-foreground placeholder:text-muted-foreground text-sm"
+                  className="bg-white/90 text-slate-900 placeholder:text-slate-500 border border-white/40 text-sm"
                   placeholder="Informe o token fornecido pelo administrador"
                 />
               </div>
@@ -293,7 +293,7 @@ export default function LoginPage() {
                   type="text"
                   value={regUsername}
                   onChange={(e) => setRegUsername(e.target.value)}
-                  className="bg-white/80 text-foreground placeholder:text-muted-foreground text-sm"
+                  className="bg-white/90 text-slate-900 placeholder:text-slate-500 border border-white/40 text-sm"
                   placeholder="login do usuário (ex.: admin@docflow)"
                 />
               </div>
@@ -308,7 +308,7 @@ export default function LoginPage() {
                   type="email"
                   value={regEmail}
                   onChange={(e) => setRegEmail(e.target.value)}
-                  className="bg-white/80 text-foreground placeholder:text-muted-foreground text-sm"
+                  className="bg-white/90 text-slate-900 placeholder:text-slate-500 border border-white/40 text-sm"
                   placeholder="usuario@empresa.com"
                 />
               </div>
@@ -322,7 +322,7 @@ export default function LoginPage() {
                   type="password"
                   value={regPassword}
                   onChange={(e) => setRegPassword(e.target.value)}
-                  className="bg-white/80 text-foreground placeholder:text-muted-foreground text-sm"
+                  className="bg-white/90 text-slate-900 placeholder:text-slate-500 border border-white/40 text-sm"
                   placeholder="••••••••"
                 />
               </div>
@@ -336,7 +336,7 @@ export default function LoginPage() {
                   type="password"
                   value={regConfirm}
                   onChange={(e) => setRegConfirm(e.target.value)}
-                  className="bg-white/80 text-foreground placeholder:text-muted-foreground text-sm"
+                  className="bg-white/90 text-slate-900 placeholder:text-slate-500 border border-white/40 text-sm"
                   placeholder="Repita a senha"
                 />
               </div>
@@ -400,7 +400,7 @@ export default function LoginPage() {
                   type="email"
                   value={forgotEmail}
                   onChange={(e) => setForgotEmail(e.target.value)}
-                  className="bg-white/80 text-foreground placeholder:text-muted-foreground text-sm"
+                  className="bg-white/90 text-slate-900 placeholder:text-slate-500 border border-white/40 text-sm"
                   placeholder="usuario@empresa.com"
                 />
               </div>
