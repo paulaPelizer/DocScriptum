@@ -1,7 +1,7 @@
 # 🗂️ **DocScriptum — Sistema de Gestão e Controle de Documentos Técnico-científicos**
 
 > 🚀 *Projeto de Conclusão de Curso — + Pra Ti / CODIFICA.Edu*  
-> 👩‍💻 **Autora:** Paula Dantas de Oliveira  
+> 👩‍💻 **Autora:** Paula Dantas de Oliveira Pelizer
 > 📅 **Ano:** 2025  
 > 📦 **Repositório:** [github.com/paulaPelizer/DocScriptum](https://github.com/paulaPelizer/DocScriptum)
 
