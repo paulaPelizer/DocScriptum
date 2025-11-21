@@ -179,7 +179,7 @@ export default function EditMultipleProjectsPage(): JSX.Element {
           </PageHeader>
 
           {/* Lista dos projetos selecionados */}
-          <Card className="neon-border">
+          <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
             <CardHeader>
               <CardTitle>Projetos Selecionados</CardTitle>
               <CardDescription>
@@ -216,7 +216,7 @@ export default function EditMultipleProjectsPage(): JSX.Element {
 
           {/* Formulário de alterações em lote */}
           <form onSubmit={handleSubmit} className="mt-6 space-y-6">
-            <Card className="neon-border">
+            <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
               <CardHeader>
                 <CardTitle>Alterações em Lote</CardTitle>
                 <CardDescription>As alterações abaixo serão aplicadas a todos os projetos selecionados</CardDescription>
@@ -285,7 +285,11 @@ export default function EditMultipleProjectsPage(): JSX.Element {
               </Link>
               <Button
                 type="submit"
-                disabled={isLoading || selectedProjects.length === 0 || (!patchStatus && !patchPriority && !patchNotes.trim())}
+                disabled={
+                  isLoading ||
+                  selectedProjects.length === 0 ||
+                  (!patchStatus && !patchPriority && !patchNotes.trim())
+                }
                 className="neon-border"
               >
                 {isLoading ? (

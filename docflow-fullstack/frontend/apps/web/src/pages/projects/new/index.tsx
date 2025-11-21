@@ -114,23 +114,24 @@ export default function NewProjectPage() {
     endDate: "",
   });
 
-  // ----------- UI mock Disciplinas/Marcos (inalterado) -----------
+  // ----------- UI mock Disciplinas/Marcos -----------
+  // Agora disciplinas/áreas temáticas de tecnologia, coerentes com o modelo do banco
   const [disciplinas, setDisciplinas] = useState<Disciplina[]>([
     {
       id: 1,
-      name: "Civil",
+      name: "Desenvolvimento Backend",
       documents: [
-        { id: 1, name: "Plantas Baixas", dueDate: "" },
-        { id: 2, name: "Memorial Descritivo Civil", dueDate: "" },
+        { id: 1, name: "Backlog de funcionalidades do Backend", dueDate: "" },
+        { id: 2, name: "Especificação de API REST", dueDate: "" },
       ],
       destinatarios: { cliente: [], fornecedor: [], interno: [] },
     },
     {
       id: 2,
-      name: "Elétrica",
+      name: "Desenvolvimento Frontend",
       documents: [
-        { id: 3, name: "Projeto Elétrico - Baixa Tensão", dueDate: "" },
-        { id: 4, name: "Memorial Descritivo Elétrico", dueDate: "" },
+        { id: 3, name: "Protótipo de Interface (UI)", dueDate: "" },
+        { id: 4, name: "Guia de Componentes / Design System", dueDate: "" },
       ],
       destinatarios: { cliente: [], fornecedor: [], interno: [] },
     },
@@ -229,7 +230,7 @@ export default function NewProjectPage() {
         statusInicial,
         dataInicio,
         dataPrevistaConclusao,
-        description: projectData.description.trim() || null, // <<< ADICIONADO
+        description: projectData.description.trim() || null,
         disciplinas: disciplinasDTO,
         marcos: marcosDTO,
       };
@@ -344,7 +345,7 @@ export default function NewProjectPage() {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Informações Básicas */}
-            <Card className="neon-border">
+            <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
               <CardHeader>
                 <CardTitle>Informações Básicas</CardTitle>
                 <CardDescription>Dados principais do projeto</CardDescription>
@@ -355,7 +356,7 @@ export default function NewProjectPage() {
                     <Label htmlFor="name">Nome do Projeto *</Label>
                     <Input
                       id="name"
-                      placeholder="Ex: Expansão da Sede"
+                      placeholder="Ex: Plataforma de Monitoramento"
                       value={projectData.name}
                       onChange={(e) => updateField("name", e.target.value)}
                       required
@@ -456,16 +457,20 @@ export default function NewProjectPage() {
             </Card>
 
             {/* Disciplinas / Documentos / Destinatários / Marcos - UI */}
-            <Card className="neon-border">
+            <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>Disciplinas e Documentos</CardTitle>
-                    <CardDescription>Configure as disciplinas do projeto, seus documentos e destinatários</CardDescription>
+                    <CardTitle>Áreas temáticas / Campos de Conhecimento / Disciplinas </CardTitle>
+                    <CardDescription>
+                      
+                      Configure as áreas temáticas, campos de conhecimento ou disciplinas do projeto. Insira também os tipos documentais e destinatários
+                      <p> Aqui ainda serão incluídas mais duas granularidades: Atividades e Espécies de documentos</p>
+                    </CardDescription>
                   </div>
                   <Button type="button" onClick={addDisciplina} variant="outline" size="sm">
                     <Plus className="mr-2 h-4 w-4" />
-                    Adicionar Disciplina
+                    Adicionar Área / Campo / Disciplina
                   </Button>
                 </div>
               </CardHeader>
@@ -474,7 +479,7 @@ export default function NewProjectPage() {
                 {disciplinas.map((disciplina, index) => (
                   <div key={disciplina.id} className="border-2 rounded-lg p-6 space-y-4">
                     <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-semibold">Disciplina {index + 1}</h3>
+                      <h3 className="text-lg font-semibold">Área / Campo / Disciplina {index + 1}</h3>
                       {disciplinas.length > 1 && (
                         <Button type="button" onClick={() => removeDisciplina(disciplina.id)} variant="ghost" size="sm">
                           <Trash2 className="h-4 w-4" />
@@ -483,37 +488,42 @@ export default function NewProjectPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor={`disciplina-name-${disciplina.id}`}>Nome da Disciplina</Label>
-                      <Select value={disciplina.name} onValueChange={(value) => updateDisciplina(disciplina.id, "name", value)}>
+                      <Label htmlFor={`disciplina-name-${disciplina.id}`}>
+                        Categoria
+                      </Label>
+                      <Select
+                        value={disciplina.name}
+                        onValueChange={(value) => updateDisciplina(disciplina.id, "name", value)}
+                      >
                         <SelectTrigger>
-                          <SelectValue placeholder="Selecione a disciplina" />
+                          <SelectValue placeholder="Selecione a disciplina/área temática" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Civil">Civil</SelectItem>
-                          <SelectItem value="Elétrica">Elétrica</SelectItem>
-                          <SelectItem value="Hidráulica">Hidráulica</SelectItem>
-                          <SelectItem value="Automação">Automação</SelectItem>
-                          <SelectItem value="Estrutural">Estrutural</SelectItem>
-                          <SelectItem value="Arquitetura">Arquitetura</SelectItem>
-                          <SelectItem value="HVAC">HVAC</SelectItem>
-                          <SelectItem value="Segurança">Segurança</SelectItem>
+                          <SelectItem value="Desenvolvimento Backend">Desenvolvimento Backend</SelectItem>
+                          <SelectItem value="Desenvolvimento Frontend">Desenvolvimento Frontend</SelectItem>
+                          <SelectItem value="Qualidade & Testes">Qualidade &amp; Testes</SelectItem>
+                          <SelectItem value="DevOps & Pipelines CI/CD">DevOps &amp; Pipelines CI/CD</SelectItem>
+                          <SelectItem value="Data & Analytics">Data &amp; Analytics</SelectItem>
+                          <SelectItem value="Segurança da Informação">Segurança da Informação</SelectItem>
+                          <SelectItem value="Integrações & APIs">Integrações &amp; APIs</SelectItem>
+                          <SelectItem value="SRE & Observabilidade">SRE &amp; Observabilidade</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
 
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <Label>Documentos da Disciplina</Label>
+                        <Label>Tipos de Documento</Label>
                         <Button type="button" onClick={() => addDocument(disciplina.id)} variant="outline" size="sm">
                           <Plus className="mr-2 h-4 w-4" />
-                          Adicionar Documento
+                          Adicionar Tipo
                         </Button>
                       </div>
                       <div className="space-y-2">
                         {disciplina.documents.map((document) => (
                           <div key={document.id} className="flex gap-2 items-center">
                             <Input
-                              placeholder="Nome do documento"
+                              placeholder="Nome do documento (ex.: Especificação de API REST)"
                               value={document.name}
                               onChange={(e) => updateDocument(disciplina.id, document.id, "name", e.target.value)}
                               className="flex-1"
@@ -540,7 +550,7 @@ export default function NewProjectPage() {
                     </div>
 
                     <div className="space-y-3">
-                      <Label>Destinatários da Disciplina</Label>
+                      <Label>Destinatários de Parceiros</Label>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         {Object.entries(userGroups).map(([groupType, users]) => (
                           <div key={groupType} className="space-y-2">
@@ -551,11 +561,16 @@ export default function NewProjectPage() {
                                   <Checkbox
                                     id={`disciplina-${disciplina.id}-${groupType}-${user.id}`}
                                     checked={
-                                      disciplina.destinatarios[groupType as keyof Disciplina["destinatarios"]]?.includes(user.id) ||
-                                      false
+                                      disciplina.destinatarios[groupType as keyof Disciplina["destinatarios"]]?.includes(
+                                        user.id,
+                                      ) || false
                                     }
                                     onCheckedChange={() =>
-                                      toggleDestinatario(disciplina.id, groupType as keyof Disciplina["destinatarios"], user.id)
+                                      toggleDestinatario(
+                                        disciplina.id,
+                                        groupType as keyof Disciplina["destinatarios"],
+                                        user.id,
+                                      )
                                     }
                                   />
                                   <Label
@@ -579,7 +594,7 @@ export default function NewProjectPage() {
             </Card>
 
             {/* Marcos */}
-            <Card className="neon-border">
+            <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
@@ -646,7 +661,9 @@ export default function NewProjectPage() {
                 </Button>
               </Link>
               <Button type="submit" disabled={isLoading || clientsLoading} className="neon-border">
-                {isLoading ? "Criando Projeto..." : (
+                {isLoading ? (
+                  "Criando Projeto..."
+                ) : (
                   <>
                     <Save className="mr-2 h-4 w-4" /> Criar Projeto
                   </>

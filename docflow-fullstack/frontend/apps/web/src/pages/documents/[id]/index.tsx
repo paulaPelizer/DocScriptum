@@ -1,11 +1,24 @@
 // src/pages/documents/[id]/index.tsx
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, FileText, PencilLine, Clock, ShieldCheck, FolderOpen } from "lucide-react";
+import {
+  ArrowLeft,
+  FileText,
+  PencilLine,
+  Clock,
+  ShieldCheck,
+  FolderOpen,
+} from "lucide-react";
 
 import AppHeader from "@/components/AppHeader";
 import { PageHeader } from "@/components/page-header";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -22,7 +35,7 @@ type DocumentApi = {
   id: number;
   code: string;
   title?: string | null;
-  name?: string | null; // alguns lugares você chamou de "name"
+  name?: string | null;
   revision?: string | null;
   format?: string | null;
   currentLocation?: string | null;
@@ -56,20 +69,19 @@ export default function PageDocumentDetail() {
       setLoading(false);
       return;
     }
+
     let alive = true;
     (async () => {
       try {
         setLoading(true);
         setError(null);
 
-        // ✅ deixe o api.ts colar a base (proxy ou absoluta)
         const data = await apiGet<DocumentApi>(`/documents/${docId}`);
 
         if (!alive) return;
         setDoc(data ?? null);
         if (!data) setError("Documento não encontrado.");
       } catch (e: any) {
-        // mostra mensagem amigável para 404; demais erros exibem a mensagem do backend
         const msg = String(e?.message || "");
         if (msg.includes("404")) {
           setError("Documento não encontrado.");
@@ -81,6 +93,7 @@ export default function PageDocumentDetail() {
         if (alive) setLoading(false);
       }
     })();
+
     return () => {
       alive = false;
     };
@@ -91,6 +104,7 @@ export default function PageDocumentDetail() {
     (doc?.project?.name && doc?.project?.code
       ? `${doc.project.name} — ${doc.project.code}`
       : doc?.project?.name || doc?.project?.code) || "-";
+
   const revision = doc?.revision || "-";
   const format = doc?.format || "-";
   const status = doc?.status || "-";
@@ -103,7 +117,13 @@ export default function PageDocumentDetail() {
       <main className="flex-1 p-4 md:p-6">
         <div className="container mx-auto">
           <PageHeader
-            title={loading ? "Carregando..." : doc ? `Documento ${doc.code}` : "Documento não encontrado."}
+            title={
+              loading
+                ? "Carregando..."
+                : doc
+                ? `Documento ${doc.code}`
+                : "Documento não encontrado."
+            }
             description={doc ? docName : undefined}
           >
             <div className="flex gap-2">
@@ -111,44 +131,53 @@ export default function PageDocumentDetail() {
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Voltar
               </Button>
+
               {doc && (
-  <>
-                    <Link to={doc.project?.id ? `/projects/${doc.project.id}` : "#"}>
-                      <Button variant="outline" disabled={!doc.project?.id}>
-                        <FolderOpen className="mr-2 h-4 w-4" />
-                        Ver Projeto
-                      </Button>
-                    </Link>
-                            
-                    <Link to={`/documents/${doc.id}/edit`}>
-                      <Button>
-                        <PencilLine className="mr-2 h-4 w-4" />
-                        Editar
-                      </Button>
-                    </Link>
-                  </>
-                )}
+                <>
+                  <Link
+                    to={
+                      doc.project?.id ? `/projects/${doc.project.id}` : "#"
+                    }
+                  >
+                    <Button variant="outline" disabled={!doc.project?.id}>
+                      <FolderOpen className="mr-2 h-4 w-4" />
+                      Ver Projeto
+                    </Button>
+                  </Link>
+
+                  <Link to={`/documents/${doc.id}/edit`}>
+                    <Button className="neon-border">
+                      <PencilLine className="mr-2 h-4 w-4" />
+                      Editar
+                    </Button>
+                  </Link>
+                </>
+              )}
             </div>
           </PageHeader>
 
           {loading && (
-            <Card className="neon-border">
+            <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md shadow-lg">
               <CardHeader>
                 <CardTitle>Carregando dados…</CardTitle>
-                <CardDescription>Buscando informações do documento</CardDescription>
+                <CardDescription>
+                  Buscando informações do documento
+                </CardDescription>
               </CardHeader>
               <CardContent>…</CardContent>
             </Card>
           )}
 
           {!loading && error && (
-            <div className="text-center text-muted-foreground mt-12">{error}</div>
+            <div className="text-center text-muted-foreground mt-12">
+              {error}
+            </div>
           )}
 
           {!loading && !error && doc && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               {/* Resumo */}
-              <Card className="neon-border lg:col-span-2">
+              <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md shadow-lg lg:col-span-2">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <FileText className="h-5 w-5" />
@@ -156,34 +185,60 @@ export default function PageDocumentDetail() {
                   </CardTitle>
                   <CardDescription>Código {doc.code}</CardDescription>
                 </CardHeader>
+
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     <Info label="Projeto" value={projectName} />
                     <Info label="Revisão" value={revision} />
                     <Info label="Formato" value={format} />
                     <Info label="Localização Atual" value={location} />
+
                     <div className="flex flex-col">
-                      <span className="text-xs text-muted-foreground mb-1">Status</span>
-                      <Badge className={cn("w-fit")}>{status}</Badge>
+                      <span className="text-xs text-muted-foreground mb-1">
+                        Status
+                      </span>
+                      <Badge className="w-fit">{status}</Badge>
                     </div>
+
                     <Info label="Páginas" value={doc.pages ?? "-"} />
-                    <Info label="Responsável técnico" value={doc.technicalResponsible ?? "-"} />
-                    <Info label="Atualizado em" value={doc.updatedAt ? formatWhen(doc.updatedAt) : "-"} />
-                    <Info label="Prazo" value={doc.dueDate ? formatWhen(doc.dueDate) : "-"} />
+                    <Info
+                      label="Responsável técnico"
+                      value={doc.technicalResponsible ?? "-"}
+                    />
+                    <Info
+                      label="Atualizado em"
+                      value={
+                        doc.updatedAt
+                          ? formatWhen(doc.updatedAt)
+                          : "-"
+                      }
+                    />
+                    <Info
+                      label="Prazo"
+                      value={
+                        doc.dueDate ? formatWhen(doc.dueDate) : "-"
+                      }
+                    />
                   </div>
 
                   <Separator />
 
                   <div>
-                    <div className="text-sm text-muted-foreground mb-1">Descrição</div>
-                    <div className="text-sm">{doc.description || "—"}</div>
+                    <div className="text-sm text-muted-foreground mb-1">
+                      Descrição
+                    </div>
+                    <div className="text-sm">
+                      {doc.description || "—"}
+                    </div>
                   </div>
 
                   {doc.fileUrl && (
                     <>
                       <Separator />
                       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                        <div className="text-sm text-muted-foreground">Arquivo principal</div>
+                        <div className="text-sm text-muted-foreground">
+                          Arquivo principal
+                        </div>
                         <a
                           href={doc.fileUrl}
                           target="_blank"
@@ -198,17 +253,24 @@ export default function PageDocumentDetail() {
                 </CardContent>
               </Card>
 
-              {/* Metadados rápidos */}
-              <Card className="neon-border">
+              {/* Metadados */}
+              <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md shadow-lg">
                 <CardHeader>
                   <CardTitle>Metadados</CardTitle>
-                  <CardDescription>Informações de ciclo e integridade</CardDescription>
+                  <CardDescription>
+                    Informações de ciclo e integridade
+                  </CardDescription>
                 </CardHeader>
+
                 <CardContent className="space-y-3">
                   <Meta
                     icon={<Clock className="h-4 w-4" />}
                     label="Data de execução"
-                    value={doc.performedDate ? formatWhen(doc.performedDate) : "-"}
+                    value={
+                      doc.performedDate
+                        ? formatWhen(doc.performedDate)
+                        : "-"
+                    }
                   />
                   <Meta
                     icon={<ShieldCheck className="h-4 w-4" />}
@@ -225,10 +287,18 @@ export default function PageDocumentDetail() {
   );
 }
 
-function Info({ label, value }: { label: string; value: React.ReactNode }) {
+function Info({
+  label,
+  value,
+}: {
+  label: string;
+  value: React.ReactNode;
+}) {
   return (
     <div className="flex flex-col">
-      <span className="text-xs text-muted-foreground mb-1">{label}</span>
+      <span className="text-xs text-muted-foreground mb-1">
+        {label}
+      </span>
       <span className="text-sm">{value}</span>
     </div>
   );

@@ -147,7 +147,7 @@ export default function GenerateGRDPage() {
 
   // “Cabeçalho” da GRD (local)
   const grdData = {
-    number: "GRD-AUTO-" + (id ?? "0000"),
+    number: "DOCM-AUTO-" + (id ?? "0000"),
     date: formatDateBR(new Date()),
     protocol: "PROT-" + (100000 + Number(id ?? 0)),
   }
@@ -239,17 +239,14 @@ Para finalizar a tramitação de número ${numero}, será necessário substituir
     }
   }
 
-  // >>> AQUI: GERAÇÃO SOMENTE NO CLIQUE <<<
+  // >>> GERAÇÃO SOMENTE NO CLIQUE <<<
   const handleGenerateGRD = async () => {
     if (!id) return
     try {
       setIsGenerating(true)
-      // 1) Atualiza status para COMPLETED no backend
       await apiPut(`/api/v1/requests/${id}/status`, { status: "COMPLETED" })
-      // 2) Recarrega a solicitação para refletir o novo status
       const refreshed = await apiGet<ApiRequest>(`/api/v1/requests/${id}`)
       setReq(refreshed)
-      // 3) Habilita a UI de “GRD Gerada com Sucesso”
       setGrdGenerated(true)
     } catch (e) {
       console.error(e)
@@ -283,7 +280,7 @@ Para finalizar a tramitação de número ${numero}, será necessário substituir
             </PageHeader>
 
             <div className="space-y-6">
-              <Card className="neon-border">
+              <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
                 <CardHeader>
                   <div className="flex items-center gap-2">
                     <CheckCircle className="h-6 w-6 text-green-500" />
@@ -297,7 +294,7 @@ Para finalizar a tramitação de número ${numero}, será necessário substituir
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <Label className="text-sm font-medium text-muted-foreground">Número da GRD</Label>
-                      <p className="font-bold text-lg neon-text">{grdData.number}</p>
+                      <p className="font-bold text-lg">{grdData.number}</p>
                     </div>
                     <div>
                       <Label className="text-sm font-medium text-muted-foreground">Data de Geração</Label>
@@ -329,7 +326,7 @@ Para finalizar a tramitação de número ${numero}, será necessário substituir
               </Card>
 
               {nonSequential.length > 0 && (
-                <Card className="neon-border">
+                <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
                   <CardHeader>
                     <CardTitle>Pendências detectadas (informativo)</CardTitle>
                     <CardDescription>Alguns documentos não estavam sequenciais</CardDescription>
@@ -346,7 +343,7 @@ Para finalizar a tramitação de número ${numero}, será necessário substituir
               )}
 
               <div className="flex justify-center">
-                <Button onClick={handleFinalize} className="neon-border">
+                <Button onClick={handleFinalize}>
                   Finalizar e Voltar para Solicitações
                 </Button>
               </div>
@@ -381,7 +378,7 @@ Para finalizar a tramitação de número ${numero}, será necessário substituir
           {!loading && !error && req && (
             <div className="space-y-6">
               {/* Dados da solicitação */}
-              <Card className="neon-border">
+              <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
                 <CardHeader>
                   <CardTitle>Dados da Solicitação</CardTitle>
                   <CardDescription>Informações da solicitação</CardDescription>
@@ -411,15 +408,15 @@ Para finalizar a tramitação de número ${numero}, será necessário substituir
               </Card>
 
               {/* Dados da GRD */}
-              <Card className="neon-border">
+              <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
                 <CardHeader>
-                  <CardTitle>Dados da GRD</CardTitle>
+                  <CardTitle>Dados do Protocolo</CardTitle>
                   <CardDescription>Informações que serão incluídas na Guia de Remessa</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="grd-number">Número da GRD</Label>
+                      <Label htmlFor="grd-number">Número do Documento</Label>
                       <Input id="grd-number" value={grdData.number} disabled />
                     </div>
                     <div className="space-y-2">
@@ -427,7 +424,7 @@ Para finalizar a tramitação de número ${numero}, será necessário substituir
                       <Input id="grd-date" type="date" defaultValue={new Date().toISOString().split("T")[0]} />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="protocol">Protocolo</Label>
+                      <Label htmlFor="protocol">Protocolo do Sistema</Label>
                       <Input id="protocol" value={grdData.protocol.toString()} disabled />
                     </div>
                     <div className="space-y-2">
@@ -437,13 +434,13 @@ Para finalizar a tramitação de número ${numero}, será necessário substituir
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="observations">Observações</Label>
-                    <Textarea id="observations" placeholder="Observações adicionais para a GRD..." className="min-h-[80px]" />
+                    <Textarea id="observations" placeholder="Observações adicionais para o Protocolo..." className="min-h-[80px]" />
                   </div>
                 </CardContent>
               </Card>
 
               {/* Documentos Incluídos */}
-              <Card className="neon-border">
+              <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
                 <CardHeader>
                   <CardTitle>Documentos Incluídos</CardTitle>
                   <CardDescription>
@@ -507,14 +504,14 @@ Para finalizar a tramitação de número ${numero}, será necessário substituir
 
               {/* Pendências do Solicitante */}
               {nonSequential.length > 0 && (
-                <Card className="neon-border">
+                <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
                   <CardHeader>
                     <CardTitle>Pendências do Solicitante</CardTitle>
                     <CardDescription>Conferir Revisão/Versão do documento</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    <div className="flex items-center gap-2 text-amber-500">
-                      <AlertTriangle className="h-4 w-4" />
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-amber-500" />
                       Existem documentos com revisão não sequencial. Enquanto a pendência não for atendida, mantenha a solicitação “IN_PROGRESS”.
                     </div>
                     <Textarea
@@ -527,7 +524,6 @@ Para finalizar a tramitação de número ${numero}, será necessário substituir
                       <div className="flex items-center gap-3">
                         <Button
                           onClick={handleSendMessage}
-                          className="neon-border"
                           variant="default"
                           disabled={isSendingMessage}
                         >
@@ -555,12 +551,11 @@ Para finalizar a tramitação de número ${numero}, será necessário substituir
                 <Button
                   onClick={handleGenerateGRD}
                   disabled={!canGenerate || isGenerating}
-                  className="neon-border"
                   aria-disabled={!canGenerate || isGenerating}
-                  title={!canGenerate ? "Resolva as pendências para habilitar a geração da GRD" : undefined}
+                  title={!canGenerate ? "Resolva as pendências para habilitar a geração do Protocolo" : undefined}
                 >
                   <FileText className="mr-2 h-4 w-4" />
-                  {isGenerating ? "Gerando GRD..." : "Gerar GRD"}
+                  {isGenerating ? "Gerando Protocolo..." : "Gerar Protocolo"}
                 </Button>
               </div>
             </div>

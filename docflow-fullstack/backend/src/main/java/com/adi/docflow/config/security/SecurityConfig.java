@@ -1,9 +1,8 @@
-// src/main/java/com/adi/docflow/config/security/SecurityConfig.java
 package com.adi.docflow.config.security;
 
+import org.springframework.http.HttpMethod;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 
 import org.springframework.security.authentication.AuthenticationManager;
@@ -12,6 +11,7 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 
@@ -31,9 +31,10 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.List;
 
 @Configuration
+@EnableMethodSecurity
 public class SecurityConfig {
 
-    /* ========= Beans básicos ========= */
+    /* ========================= BEANS BÁSICOS ========================= */
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -58,11 +59,12 @@ public class SecurityConfig {
         return new JwtAuthFilter(jwtService, uds);
     }
 
-    /* ========= CORS ========= */
+    /* ============================== CORS ============================== */
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration cfg = new CorsConfiguration();
-        // Ajuste origens conforme precisar nos testes
+
         cfg.setAllowedOriginPatterns(List.of("http://localhost:*", "http://127.0.0.1:*"));
         cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         cfg.setAllowedHeaders(List.of("*"));
@@ -74,52 +76,61 @@ public class SecurityConfig {
         return source;
     }
 
-    /* ========= Security Chain (PERMIT ALL) ========= */
+    /* ========================== SECURITY =========================== */
+
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http,
-                                                   AuthenticationProvider authProvider,
-                                                   JwtAuthFilter jwtAuthFilter) throws Exception {
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            AuthenticationProvider authProvider,
+            JwtAuthFilter jwtAuthFilter
+    ) throws Exception {
 
         http
-            .csrf(csrf -> csrf.disable())
-            .cors(Customizer.withDefaults())
-            .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .csrf(csrf -> csrf.disable())
+                .cors(Customizer.withDefaults())
+                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .requestCache(rc -> rc.disable())
 
-            .authorizeHttpRequests(auth -> auth
-                // Preflight e páginas públicas
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                .requestMatchers("/error").permitAll()
+                /* ========================= EXCEÇÕES ========================= */
+                .exceptionHandling(ex -> ex
+                        // 401 ao invés de redirecionar
+                        .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
+                        // 403 ao invés de redirecionar
+                        .accessDeniedHandler((req, res, e) -> {
+                            res.setStatus(HttpStatus.FORBIDDEN.value());
+                        })
+                )
 
-                // Swagger & health
-                .requestMatchers(
-                    "/v3/api-docs/**",
-                    "/swagger-ui/**",
-                    "/swagger-ui.html",
-                    "/api/v1/health",
-                    "/actuator/health"
-                ).permitAll()
+                /* ======================= ROTAS PÚBLICAS ======================= */
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(
+                                "/error",                // 🔥 IMPORTANTE — evita loop do login
+                                "/api/v1/auth/**",       // login / refresh
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/v3/api-docs/**",
+                                "/v3/api-docs.yaml",
+                                "/favicon.ico",
+                                "/index.html",
+                                "/",
+                                "/assets/**",
+                                "/static/**",
+                                "/css/**",
+                                "/js/**",
+                                "/images/**"
+                        ).permitAll()
 
-                // Auth endpoints
-                .requestMatchers("/api/v1/auth/**").permitAll()
+                        // Rotas específicas protegidas
+                        .requestMatchers("/api/v1/users/me").authenticated()
 
-                // >>>>> Libera TUDO da API (todas as operações) por enquanto
-                .requestMatchers("/api/v1/**").permitAll()
+                        // TODO O RESTO PRECISA DE TOKEN
+                        .anyRequest().authenticated()
+                )
 
-                // E o restante também
-                .anyRequest().permitAll()
-            )
+                .authenticationProvider(authProvider)
 
-            .exceptionHandling(ex -> ex
-                .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
-                .accessDeniedHandler((req, res, e) -> {
-                    res.setStatus(HttpStatus.FORBIDDEN.value());
-                    res.getWriter().write("Acesso negado");
-                })
-            )
-
-            // Mantém provider e filtro (não bloqueiam nada com permitAll)
-            .authenticationProvider(authProvider)
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                // Filtro JWT antes do UsernamePasswordAuthenticationFilter
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

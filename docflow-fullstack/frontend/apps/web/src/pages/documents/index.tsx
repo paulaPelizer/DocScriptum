@@ -2,11 +2,29 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,7 +34,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Plus, Search, ArrowRightLeft, Filter as FilterIcon } from "lucide-react";
+import {
+  MoreHorizontal,
+  Plus,
+  Search,
+  ArrowRightLeft,
+  Filter as FilterIcon,
+} from "lucide-react";
 import AppHeader from "@/components/AppHeader";
 import { PageHeader } from "@/components/page-header";
 import { cn } from "@/lib/utils";
@@ -88,7 +112,7 @@ const FILTER_OPTIONS = [
   { key: "lastUpdated", label: "Atualização" },
 ] as const;
 
-type FilterKey = typeof FILTER_OPTIONS[number]["key"];
+type FilterKey = (typeof FILTER_OPTIONS)[number]["key"];
 
 export default function DocumentsPage() {
   const navigate = useNavigate();
@@ -100,7 +124,7 @@ export default function DocumentsPage() {
   // Busca/filtragem local
   const [q, setQ] = useState("");
 
-  // >>> novo: múltiplos campos selecionados (como em clients)
+  // múltiplos campos selecionados
   const ALL_FIELDS = FILTER_OPTIONS.map((o) => o.key) as FilterKey[];
   const [selectedFields, setSelectedFields] = useState<FilterKey[]>(ALL_FIELDS);
 
@@ -185,7 +209,7 @@ export default function DocumentsPage() {
     fetchDocuments();
   }, []);
 
-  // === NOVO: handler para redirecionar edição por hash ===
+  // redireciona edição por hash
   const handleEdit = async (docId: number) => {
     try {
       const detail: any = await apiGet(`/api/v1/documents/${docId}`);
@@ -207,11 +231,10 @@ export default function DocumentsPage() {
     }
   };
 
-  // Filtragem local “ao digitar” considerando múltiplos campos
+  // Filtragem local considerando múltiplos campos
   const filteredDocs = useMemo(() => {
     if (!q.trim()) return docs;
 
-    // se nenhum campo estiver marcado, tratamos como "todos"
     const fields = selectedFields.length ? selectedFields : ALL_FIELDS;
 
     const query = q.toLowerCase();
@@ -244,7 +267,10 @@ export default function DocumentsPage() {
 
       <main className="flex-1 p-4 md:p-6">
         <div className="container mx-auto">
-          <PageHeader title="Documentos" description="Gerencie documentos e tramitações">
+          <PageHeader
+            title="Documentos"
+            description="Gerencie documentos e tramitações"
+          >
             <div className="w-full sm:w-auto flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-end">
               <div className="relative w-full sm:w-[320px]">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -273,7 +299,6 @@ export default function DocumentsPage() {
                     <DropdownMenuCheckboxItem
                       key={opt.key}
                       checked={selectedFields.includes(opt.key)}
-                      // impede o fechamento do menu ao clicar
                       onSelect={(e) => e.preventDefault()}
                       onCheckedChange={(c) => toggleField(opt.key, Boolean(c))}
                     >
@@ -320,10 +345,12 @@ export default function DocumentsPage() {
             </TabsList>
 
             <TabsContent value="documents">
-              <Card className="neon-border">
+              <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md shadow-lg">
                 <CardHeader>
                   <CardTitle>Lista de Documentos</CardTitle>
-                  <CardDescription>Todos os documentos cadastrados no sistema</CardDescription>
+                  <CardDescription>
+                    Todos os documentos cadastrados no sistema
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Table>
@@ -343,20 +370,28 @@ export default function DocumentsPage() {
                     <TableBody>
                       {loading ? (
                         <TableRow>
-                          <TableCell colSpan={9} className="text-center text-muted-foreground">
+                          <TableCell
+                            colSpan={9}
+                            className="text-center text-muted-foreground"
+                          >
                             Carregando...
                           </TableCell>
                         </TableRow>
                       ) : filteredDocs.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={9} className="text-center text-muted-foreground">
+                          <TableCell
+                            colSpan={9}
+                            className="text-center text-muted-foreground"
+                          >
                             Nenhum documento encontrado.
                           </TableCell>
                         </TableRow>
                       ) : (
                         filteredDocs.map((doc) => (
                           <TableRow key={doc.id}>
-                            <TableCell className="font-medium">{doc.code}</TableCell>
+                            <TableCell className="font-medium">
+                              {doc.code}
+                            </TableCell>
                             <TableCell>{doc.name}</TableCell>
                             <TableCell>{doc.project}</TableCell>
                             <TableCell>{doc.revision}</TableCell>
@@ -376,22 +411,35 @@ export default function DocumentsPage() {
                                 <DropdownMenuTrigger asChild>
                                   <Button variant="ghost" size="icon">
                                     <MoreHorizontal className="h-4 w-4" />
-                                    <span className="sr-only">Abrir menu</span>
+                                    <span className="sr-only">
+                                      Abrir menu
+                                    </span>
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                   <DropdownMenuItem asChild>
-                                    <Link to={`/documents/${doc.id}`} className="flex w-full">
+                                    <Link
+                                      to={`/documents/${doc.id}`}
+                                      className="flex w-full"
+                                    >
                                       Ver detalhes
                                     </Link>
                                   </DropdownMenuItem>
                                   <DropdownMenuItem asChild>
-                                    <Link to={`/documents/${doc.id}/history`} className="flex w-full">
+                                    <Link
+                                      to={`/documents/${doc.id}/history`}
+                                      className="flex w-full"
+                                    >
                                       Histórico de revisões
                                     </Link>
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem onSelect={() => handleEdit(doc.id)}>
-                                    <Link to={`/documents/${doc.id}/edit`} className="flex w-full">
+                                  <DropdownMenuItem
+                                    onSelect={() => handleEdit(doc.id)}
+                                  >
+                                    <Link
+                                      to={`/documents/${doc.id}/edit`}
+                                      className="flex w-full"
+                                    >
                                       Editar
                                     </Link>
                                   </DropdownMenuItem>
@@ -408,10 +456,12 @@ export default function DocumentsPage() {
             </TabsContent>
 
             <TabsContent value="routings">
-              <Card className="neon-border">
+              <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md shadow-lg">
                 <CardHeader>
                   <CardTitle>Tramitações</CardTitle>
-                  <CardDescription>Histórico de tramitações de documentos</CardDescription>
+                  <CardDescription>
+                    Histórico de tramitações de documentos
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Table>
@@ -430,7 +480,9 @@ export default function DocumentsPage() {
                     <TableBody>
                       {routings.map((routing) => (
                         <TableRow key={routing.id}>
-                          <TableCell className="font-medium">{routing.grdNumber}</TableCell>
+                          <TableCell className="font-medium">
+                            {routing.grdNumber}
+                          </TableCell>
                           <TableCell>{routing.project}</TableCell>
                           <TableCell>{routing.origin}</TableCell>
                           <TableCell>{routing.destination}</TableCell>
@@ -454,18 +506,27 @@ export default function DocumentsPage() {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem asChild>
-                                  <Link to={`/documents/routing/${routing.id}`} className="flex w-full">
+                                  <Link
+                                    to={`/documents/routing/${routing.id}`}
+                                    className="flex w-full"
+                                  >
                                     Ver detalhes
                                   </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem asChild>
-                                  <Link to={`/documents/routing/${routing.id}/grd`} className="flex w-full">
+                                  <Link
+                                    to={`/documents/routing/${routing.id}/grd`}
+                                    className="flex w-full"
+                                  >
                                     Visualizar GRD
                                   </Link>
                                 </DropdownMenuItem>
                                 {routing.status !== "Concluído" && (
                                   <DropdownMenuItem asChild>
-                                    <Link to={`/documents/routing/${routing.id}/validate`} className="flex w-full">
+                                    <Link
+                                      to={`/documents/routing/${routing.id}/validate`}
+                                      className="flex w-full"
+                                    >
                                       Validar
                                     </Link>
                                   </DropdownMenuItem>

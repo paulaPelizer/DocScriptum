@@ -237,7 +237,7 @@ export default function ClientDetailPage() {
           </PageHeader>
 
           {/* Informações do cliente */}
-          <Card className="neon-border">
+          <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
             <CardHeader>
               <CardTitle>Informações do Cliente</CardTitle>
               <CardDescription>Dados cadastrais e de contato</CardDescription>
@@ -285,7 +285,7 @@ export default function ClientDetailPage() {
           </Card>
 
           {/* Projetos do cliente */}
-          <Card className="neon-border mt-6">
+          <Card className="neon-border mt-6 border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
             <CardHeader>
               <CardTitle>Projetos</CardTitle>
               <CardDescription>Projetos associados a este cliente</CardDescription>

@@ -16,12 +16,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
-/**
- * Filtro JWT:
- * - Ignora rotas públicas e preflight CORS
- * - Não retorna 401/403 se o token não for enviado
- * - Autentica apenas se houver um Bearer token válido
- */
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
@@ -38,78 +32,82 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                                     FilterChain chain)
             throws ServletException, IOException {
 
-        // 1) Ignorar preflight (CORS)
-        if (HttpMethod.OPTIONS.matches(req.getMethod())) {
+        String path = req.getServletPath();
+        String method = req.getMethod();
+
+        // 1) Ignora preflight CORS
+        if (HttpMethod.OPTIONS.matches(method)) {
             chain.doFilter(req, res);
             return;
         }
 
-        // 2) Ignorar endpoints públicos (mesma lógica do SecurityConfig)
-        final String path = req.getServletPath();
-        final String method = req.getMethod();
+        // 2) Rotas públicas → não tenta autenticar
         if (isPublic(path, method)) {
             chain.doFilter(req, res);
             return;
         }
 
-        // 3) Tentar autenticar SOMENTE se houver Authorization: Bearer ...
+        // 3) Lê Authorization: Bearer <token>
         String auth = req.getHeader("Authorization");
         if (!StringUtils.hasText(auth) || !auth.startsWith("Bearer ")) {
-            // Sem header -> segue sem autenticar (SecurityConfig decide)
             chain.doFilter(req, res);
             return;
         }
 
         String token = auth.substring(7);
+
         try {
             String username = jwtService.extractUsername(token);
-            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                UserDetails user = userDetailsService.loadUserByUsername(username);
-                if (jwtService.isValid(token, user)) {
-                    var authentication = new UsernamePasswordAuthenticationToken(
-                            user, null, user.getAuthorities());
-                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(req));
+
+            if (username != null &&
+                    SecurityContextHolder.getContext().getAuthentication() == null) {
+
+                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+
+                if (jwtService.isValid(token, userDetails)) {
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails,
+                                    null,
+                                    userDetails.getAuthorities()
+                            );
+
+                    authentication.setDetails(
+                            new WebAuthenticationDetailsSource().buildDetails(req)
+                    );
+
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 }
             }
         } catch (Exception ignored) {
-            // Token inválido/expirado: não falha aqui; deixa a autorização decidir adiante
+            // Token inválido/expirado → segue como anônimo, quem decide é o SecurityConfig
         }
 
-        // 4) Segue o fluxo
         chain.doFilter(req, res);
     }
 
     /**
-     * Rotas públicas espelhadas do SecurityConfig.
-     * Durante o DEV, clients/projects estão totalmente liberados (qualquer método).
+     * Mesma definição de rotas públicas usada no SecurityConfig.
      */
     private boolean isPublic(String path, String method) {
-        if (path == null) return true;
+        if (path == null) return false;
 
-        // Públicos gerais
+        // Rotas de auth e health
         if (path.startsWith("/api/v1/auth")
-            || path.equals("/api/v1/health")
-            || path.equals("/actuator/health")
-            || path.startsWith("/v3/api-docs")
-            || path.startsWith("/swagger-ui")
-            || path.equals("/swagger-ui.html")) {
+                || path.equals("/api/v1/health")
+                || path.equals("/actuator/health")) {
             return true;
         }
 
-        // GETs públicos
-        if ("GET".equalsIgnoreCase(method) &&
-                (path.startsWith("/api/v1/projects")
-              || path.startsWith("/api/v1/clients")
-              || path.startsWith("/api/v1/orgs"))) {
+        // Swagger / OpenAPI
+        if (path.startsWith("/v3/api-docs")
+                || path.startsWith("/swagger-ui")
+                || path.equals("/swagger-ui.html")) {
             return true;
         }
 
-        // DEV: liberar qualquer método para clients/projects (espelha SecurityConfig)
-        if (path.startsWith("/api/v1/clients") || path.startsWith("/api/v1/projects")) {
-            return true;
-        }
-
+        // Se em algum momento quiser GET público de algo, coloca aqui.
+        // Por enquanto, o resto é protegido (tem que vir com JWT).
         return false;
     }
 }

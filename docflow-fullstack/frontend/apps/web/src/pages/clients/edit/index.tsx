@@ -1,3 +1,4 @@
+// src/pages/clients/[id]/edit.tsx
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Save } from "lucide-react";
@@ -41,7 +42,6 @@ export default function EditClientPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [client, setClient] = useState<ClientDTO | null>(null);
 
-  // Selects controlados
   const [status, setStatus] = useState<StatusDTO>("ATIVO");
   const [segment, setSegment] = useState<string>("");
   const [uf, setUf] = useState<string>("");
@@ -57,7 +57,6 @@ export default function EditClientPage() {
         setSegment(data.segment ?? "");
         setUf(data.addrState ?? "");
       } catch (e) {
-        console.error("Erro ao carregar cliente:", e);
         alert("Falha ao carregar os dados do cliente.");
       } finally {
         setIsLoading(false);
@@ -72,6 +71,7 @@ export default function EditClientPage() {
     setIsLoading(true);
     try {
       const fd = new FormData(e.currentTarget);
+
       const payload = {
         name: String(fd.get("company-name") || "").trim(),
         cnpj: String(fd.get("cnpj") || "").trim(),
@@ -100,7 +100,6 @@ export default function EditClientPage() {
 
       navigate("/clients");
     } catch (err: any) {
-      console.error("Falha ao atualizar cliente:", err);
       alert(err?.message || "Erro ao salvar as alterações.");
     } finally {
       setIsLoading(false);
@@ -131,27 +130,30 @@ export default function EditClientPage() {
           </PageHeader>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Informações da Empresa */}
-            <Card className="neon-border">
+
+            {/* ======== CARD 1 – Empresa ======== */}
+            <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
               <CardHeader>
                 <CardTitle>Informações da Empresa</CardTitle>
                 <CardDescription>Dados principais do cliente</CardDescription>
               </CardHeader>
+
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="company-name">Nome da Empresa *</Label>
                     <Input id="company-name" name="company-name" defaultValue={client?.name} required />
                   </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="cnpj">CNPJ</Label>
-                    <Input id="cnpj" name="cnpj" defaultValue={client?.cnpj} />
+                    <Input id="cnpj" name="cnpj" defaultValue={client?.cnpj || ""} />
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="description">Descrição / Ramo de Atividade</Label>
-                  <Textarea id="description" name="description" defaultValue={client?.description} />
+                  <Textarea id="description" name="description" defaultValue={client?.description || ""} />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -166,6 +168,7 @@ export default function EditClientPage() {
                       </SelectContent>
                     </Select>
                   </div>
+
                   <div className="space-y-2">
                     <Label>Segmento</Label>
                     <Select value={segment} onValueChange={setSegment}>
@@ -183,15 +186,19 @@ export default function EditClientPage() {
               </CardContent>
             </Card>
 
-            {/* Endereço */}
-            <Card className="neon-border">
-              <CardHeader><CardTitle>Endereço</CardTitle></CardHeader>
+            {/* ======== CARD 2 – Endereço ======== */}
+            <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
+              <CardHeader>
+                <CardTitle>Endereço</CardTitle>
+              </CardHeader>
+
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2 md:col-span-2">
                     <Label htmlFor="address">Endereço</Label>
                     <Input id="address" name="address" defaultValue={client?.addrStreet} />
                   </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="number">Número</Label>
                     <Input id="number" name="number" defaultValue={client?.addrNumber} />
@@ -203,10 +210,12 @@ export default function EditClientPage() {
                     <Label htmlFor="complement">Complemento</Label>
                     <Input id="complement" name="complement" defaultValue={client?.addrComplement} />
                   </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="neighborhood">Bairro</Label>
                     <Input id="neighborhood" name="neighborhood" defaultValue={client?.addrDistrict} />
                   </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="cep">CEP</Label>
                     <Input id="cep" name="cep" defaultValue={client?.addrZipcode} />
@@ -218,9 +227,10 @@ export default function EditClientPage() {
                     <Label htmlFor="city">Cidade</Label>
                     <Input id="city" name="city" defaultValue={client?.addrCity} />
                   </div>
+
                   <div className="space-y-2">
                     <Label>Estado</Label>
-                    <Select value={uf} onValueChange={(v) => setUf(v)}>
+                    <Select value={uf} onValueChange={setUf}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="SP">São Paulo</SelectItem>
@@ -234,15 +244,19 @@ export default function EditClientPage() {
               </CardContent>
             </Card>
 
-            {/* Contato Principal */}
-            <Card className="neon-border">
-              <CardHeader><CardTitle>Contato Principal</CardTitle></CardHeader>
+            {/* ======== CARD 3 – Contato ======== */}
+            <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
+              <CardHeader>
+                <CardTitle>Contato Principal</CardTitle>
+              </CardHeader>
+
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="contact-name">Nome do Contato *</Label>
                     <Input id="contact-name" name="contact-name" defaultValue={client?.contactName} required />
                   </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="position">Cargo</Label>
                     <Input id="position" name="position" defaultValue={client?.contactRole} />
@@ -254,6 +268,7 @@ export default function EditClientPage() {
                     <Label htmlFor="email">Email *</Label>
                     <Input id="email" name="email" type="email" defaultValue={client?.contactEmail} required />
                   </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="phone">Telefone</Label>
                     <Input id="phone" name="phone" defaultValue={client?.contactPhone} />
@@ -267,12 +282,24 @@ export default function EditClientPage() {
               </CardContent>
             </Card>
 
+            {/* ======== BOTÕES ======== */}
             <div className="flex justify-end gap-4">
-              <Link to="/clients"><Button variant="outline">Cancelar</Button></Link>
+              <Link to="/clients">
+                <Button variant="outline">Cancelar</Button>
+              </Link>
+
               <Button type="submit" disabled={isLoading} className="neon-border">
-                {isLoading ? "Salvando..." : (<><Save className="mr-2 h-4 w-4" />Salvar Alterações</>)}
+                {isLoading ? (
+                  "Salvando..."
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Salvar Alterações
+                  </>
+                )}
               </Button>
             </div>
+
           </form>
         </div>
       </main>

@@ -206,7 +206,7 @@ export default function RequestDetailPage() {
     setError(null)
     try {
       const updated = await apiPut<ApiRequest>(`/api/v1/requests/${id}/approve`, {})
-      setReq(updated) // reflete mudança para IN_PROGRESS
+      setReq(updated)
       navigate(`/requests/${id}/generate-grd`)
     } catch (e) {
       console.error(e)
@@ -257,7 +257,7 @@ export default function RequestDetailPage() {
           {!loading && !error && req && (
             <div className="grid gap-6">
               {/* Informações Gerais */}
-              <Card className="neon-border">
+              <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle className="flex items-center gap-2">
@@ -314,7 +314,7 @@ export default function RequestDetailPage() {
               </Card>
 
               {/* Origem e Destino */}
-              <Card className="neon-border">
+              <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Users className="h-4 w-4" aria-hidden />
@@ -344,7 +344,7 @@ export default function RequestDetailPage() {
               </Card>
 
               {/* Documentos */}
-              <Card className="neon-border">
+              <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <FileText className="h-4 w-4" aria-hidden />
@@ -371,7 +371,6 @@ export default function RequestDetailPage() {
                           </div>
 
                           <div className="flex items-center gap-4">
-                            {/* Indicador de qualidade (mock por quartis) */}
                             <QualityGlyph q={doc.quality} />
 
                             <Button
@@ -390,12 +389,10 @@ export default function RequestDetailPage() {
               </Card>
 
               {/* Atendimento da Solicitação */}
-              {(
-                  req.status === "PENDING" ||
-                  req.status === "IN_PROGRESS" ||
-                  req.status === "WAITING_CLIENT"
-                ) && (
-                  <Card className="neon-border">
+              {(req.status === "PENDING" ||
+                req.status === "IN_PROGRESS" ||
+                req.status === "WAITING_CLIENT") && (
+                <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
                   <CardHeader>
                     <CardTitle>Atendimento da Solicitação</CardTitle>
                     <CardDescription>
@@ -427,10 +424,9 @@ export default function RequestDetailPage() {
                         onClick={handleApprove}
                         disabled={isProcessing}
                         aria-disabled={isProcessing}
-                        className="neon-border"
                       >
                         <CheckCircle className="mr-2 h-4 w-4" aria-hidden />
-                        {isProcessing ? "Processando..." : "Aprovar e Gerar GRD"}
+                        {isProcessing ? "Processando..." : "Aprovar e Gerar Protocolo"}
                       </Button>
                     </div>
                   </CardContent>

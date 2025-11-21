@@ -10,7 +10,7 @@ import { ArrowLeft, Save } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import AppHeader from "@/components/AppHeader";
 import { PageHeader } from "@/components/page-header";
-import { apiFetch } from "@/services/api";
+import { createClient } from "@/services/clients";
 
 type StatusDTO = "ATIVO" | "INATIVO" | "PROSPECTO";
 
@@ -34,7 +34,7 @@ export default function NewClientPage() {
         name: String(fd.get("company-name") || "").trim(),
         cnpj: String(fd.get("cnpj") || "").trim(),
         description: String(fd.get("description") || "").trim(),
-        status,                     // "ATIVO" | "INATIVO" | "PROSPECTO"
+        status, // "ATIVO" | "INATIVO" | "PROSPECTO"
         segment: segment || String(fd.get("segment") || "").trim(), // fallback se quiser
         addrStreet: String(fd.get("address") || "").trim(),
         addrNumber: String(fd.get("number") || "").trim(),
@@ -54,11 +54,8 @@ export default function NewClientPage() {
       if (!payload.name) throw new Error("Informe o nome da empresa.");
       if (!payload.contactEmail) throw new Error("Informe o e-mail do contato.");
 
-      await apiFetch("/clients", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      // usa o service que já injeta Authorization: Bearer <token>
+      await createClient(payload);
 
       navigate("/clients");
     } catch (err: any) {
@@ -86,7 +83,7 @@ export default function NewClientPage() {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Informações da Empresa */}
-            <Card className="neon-border">
+            <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
               <CardHeader>
                 <CardTitle>Informações da Empresa</CardTitle>
                 <CardDescription>Dados principais do cliente</CardDescription>
@@ -147,7 +144,7 @@ export default function NewClientPage() {
             </Card>
 
             {/* Endereço */}
-            <Card className="neon-border">
+            <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
               <CardHeader>
                 <CardTitle>Endereço</CardTitle>
                 <CardDescription>Endereço da sede da empresa</CardDescription>
@@ -204,7 +201,7 @@ export default function NewClientPage() {
             </Card>
 
             {/* Contato Principal */}
-            <Card className="neon-border">
+            <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
               <CardHeader>
                 <CardTitle>Contato Principal</CardTitle>
                 <CardDescription>Pessoa responsável pelo contato</CardDescription>

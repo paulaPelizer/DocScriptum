@@ -1,30 +1,45 @@
 // src/main/java/com/adi/docflow/web/RequestController.java
 package com.adi.docflow.web;
 
-import com.adi.docflow.model.*;
+import com.adi.docflow.model.Document;
+import com.adi.docflow.model.Organization;
+import com.adi.docflow.model.Project;
+import com.adi.docflow.model.Request;
+import com.adi.docflow.model.RequestDocument;
+import com.adi.docflow.model.RequestStatus;
 import com.adi.docflow.repository.RequestDocumentRepository;
+import com.adi.docflow.repository.UserRepository;
 import com.adi.docflow.service.RequestService;
 import com.adi.docflow.web.dto.CreateRequestDTO;
 import com.adi.docflow.web.dto.DocumentDTO;
+import com.adi.docflow.web.dto.NotifyRequesterDTO;
 import com.adi.docflow.web.dto.OrganizationDTO;
 import com.adi.docflow.web.dto.ProjectDTO;
 import com.adi.docflow.web.dto.RequestResponseDTO;
 import com.adi.docflow.web.dto.RequestSummaryDTO;
 import com.adi.docflow.web.dto.UpdateRequestDTO;
-import com.adi.docflow.web.dto.NotifyRequesterDTO;
 
 import jakarta.transaction.Transactional;
-import org.springframework.data.domain.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.NoSuchElementException;
 
+/**
+ * Controller de Solicitações (Request).
+ */
 @RestController
 @RequestMapping("/api/v1/requests")
 public class RequestController {
@@ -32,13 +47,16 @@ public class RequestController {
     private final RequestService service;
     private final RequestDocumentRepository reqDocRepo;
     private final JavaMailSender mailSender;
+    private final UserRepository userRepo;
 
     public RequestController(RequestService service,
                              RequestDocumentRepository reqDocRepo,
-                             JavaMailSender mailSender) {
+                             JavaMailSender mailSender,
+                             UserRepository userRepo) {
         this.service = service;
         this.reqDocRepo = reqDocRepo;
         this.mailSender = mailSender;
+        this.userRepo = userRepo;
     }
 
     /* ------------------------ MAPEADORES DTO ------------------------ */
@@ -107,9 +125,17 @@ public class RequestController {
 
     /* --------------------------- ENDPOINTS -------------------------- */
 
-    /** Cria uma Request (sem protocolo; número legível é gerado). */
+    /**
+     * Cria uma Request (sem protocolo; número legível é gerado).
+     *
+     * Aqui já tentamos preencher requesterName / requesterContact a partir
+     * dos dados enviados no DTO ou, se vierem vazios, do usuário autenticado.
+     */
     @PostMapping
-    public ResponseEntity<RequestResponseDTO> create(@RequestBody CreateRequestDTO dto) {
+    public ResponseEntity<RequestResponseDTO> create(
+            @RequestBody CreateRequestDTO dto,
+            Authentication auth
+    ) {
         Project project = service.requireProject(dto.getProjectId());
         Organization origin = service.requireOrg(dto.getRequesterOrgId());
         Organization destination = service.requireOrg(dto.getTargetOrgId());
@@ -122,18 +148,36 @@ public class RequestController {
         r.setPurpose(dto.getPurpose());
         r.setDescription(dto.getDescription());
 
-        if (dto.getRequesterUserId() != null) {
-            String requesterName = service.resolveRequesterUser(dto.getRequesterUserId());
-            r.setRequesterName(requesterName);
-            r.setRequesterContact(dto.getRequesterContact());
-        } else {
-            r.setRequesterName(dto.getRequesterName());
-            r.setRequesterContact(dto.getRequesterContact());
+        // --- preencher solicitante / contato ---
+
+        // valores vindos (opcionalmente) do front
+        String requesterName = dto.getRequesterName();
+        String requesterContact = dto.getRequesterContact();
+
+        if (auth != null && auth.isAuthenticated()) {
+            String username = auth.getName(); // ex.: "dba.docscriptum"
+
+            // se não veio nome no DTO, usa o username logado
+            if (requesterName == null || requesterName.isBlank()) {
+                requesterName = username;
+            }
+
+            // se não veio contato no DTO, tenta buscar e-mail no AppUser
+            if (requesterContact == null || requesterContact.isBlank()) {
+                String emailFromUser = userRepo.findByUsernameIgnoreCase(username)
+                        .map(u -> u.getEmail())
+                        .orElse(null);
+
+                if (emailFromUser != null && !emailFromUser.isBlank()) {
+                    requesterContact = emailFromUser;
+                }
+            }
         }
 
-        r.setTargetName(service.resolveOrgName(dto.getTargetOrgId()));
-        r.setTargetContact(service.resolveOrgContact(dto.getTargetOrgId()));
+        r.setRequesterName(requesterName);
+        r.setRequesterContact(requesterContact);
 
+        // --- datas e demais campos ---
         r.setRequestDate(dto.getRequestDate() != null ? dto.getRequestDate() : OffsetDateTime.now());
         r.setDeadline(dto.getDesiredDeadline());
         r.setJustification(dto.getJustification());
@@ -206,6 +250,7 @@ public class RequestController {
 
     @PutMapping("{id}")
     @Transactional
+    @PreAuthorize("hasAnyRole('DBA','ADMIN','RESOURCE')")
     public ResponseEntity<RequestResponseDTO> update(
             @PathVariable Long id,
             @RequestBody UpdateRequestDTO dto
@@ -222,6 +267,7 @@ public class RequestController {
 
     @PutMapping("{id}/status")
     @Transactional
+    @PreAuthorize("hasAnyRole('DBA','ADMIN','RESOURCE')")
     public ResponseEntity<RequestResponseDTO> updateStatus(
             @PathVariable Long id,
             @RequestBody UpdateRequestDTO body
@@ -239,6 +285,7 @@ public class RequestController {
 
     @PutMapping("{id}/approve")
     @Transactional
+    @PreAuthorize("hasAnyRole('DBA','ADMIN','RESOURCE')")
     public ResponseEntity<RequestResponseDTO> approve(@PathVariable Long id) {
         try {
             Request updated = service.updateStatus(id, RequestStatus.IN_PROGRESS, null);
@@ -250,6 +297,7 @@ public class RequestController {
 
     @PutMapping("{id}/reject")
     @Transactional
+    @PreAuthorize("hasAnyRole('DBA','ADMIN','RESOURCE')")
     public ResponseEntity<RequestResponseDTO> reject(
             @PathVariable Long id,
             @RequestBody(required = false) UpdateRequestDTO body
@@ -267,6 +315,7 @@ public class RequestController {
 
     @PostMapping("{id}/notify-requester")
     @Transactional
+    @PreAuthorize("hasAnyRole('DBA','ADMIN','RESOURCE')")
     public ResponseEntity<Void> notifyRequester(
             @PathVariable Long id,
             @RequestBody NotifyRequesterDTO body
@@ -280,7 +329,7 @@ public class RequestController {
 
             String email = req.getRequesterContact();
             if (email == null || email.isBlank()) {
-                return ResponseEntity.badRequest().build();
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
             }
 
             String subject = "[DocScriptum] Atualização da sua solicitação";
@@ -308,6 +357,7 @@ public class RequestController {
     /** Gera e salva o protocolo da Request caso ainda não exista. */
     @PostMapping("{id}/ensure-protocol")
     @Transactional
+    @PreAuthorize("hasAnyRole('DBA','ADMIN','RESOURCE')")
     public ResponseEntity<RequestResponseDTO> ensureProtocol(@PathVariable Long id) {
         try {
             Request updated = service.ensureProtocol(id);
@@ -325,6 +375,7 @@ public class RequestController {
      */
     @PostMapping("{id}/finalize")
     @Transactional
+    @PreAuthorize("hasAnyRole('DBA','ADMIN')")
     public ResponseEntity<RequestResponseDTO> finalizeRequest(@PathVariable Long id) {
         try {
             Request updated = service.finalizeRequest(id);

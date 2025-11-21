@@ -1,10 +1,11 @@
 package com.adi.docflow.web.dto;
 
-import lombok.*;
+import java.util.List;
 
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
-public class DisciplineDTO {
-    private Long id;
-    private String code;
-    private String name;
-}
+public record DisciplineDTO(
+        Long id,
+        String name,
+        String destinatarioCliente,
+        String destinatarioInterno,
+        List<DocTipoQtdInput> tipos
+) {}

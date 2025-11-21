@@ -219,9 +219,16 @@ public class DocumentController {
                 .map(v -> new ProjectSummaryDTO(v.getId(), v.getCode(), v.getName()))
                 .collect(Collectors.toList());
 
-        var disciplines = disciplineLookupRepo.findAllAsView(projectId).stream()
-                .map(v -> new DisciplineDTO(v.getId(), v.getCode(), v.getName()))
-                .collect(Collectors.toList());
+       var disciplines = disciplineLookupRepo.findAllAsView(projectId).stream()
+        .map(v -> new DisciplineDTO(
+                v.getId(),         // ou v.getDisciplineId(), se for esse o nome
+                v.getName(),       // nome da disciplina
+                null,              // destinatarioCliente (aqui não usamos ainda)
+                null,              // destinatarioInterno
+                List.of()          // lista de tipos vazia no form
+        ))
+        .collect(Collectors.toList());
+
 
         var docTypes = docTypeLookupRepo.findAllAsView(projectId).stream()
                 .map(v -> new DocTypeDTO(v.getId(), v.getCode(), v.getName(), v.getDisciplineId()))

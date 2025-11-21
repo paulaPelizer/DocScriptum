@@ -14,13 +14,13 @@ import com.adi.docflow.repository.ProjectDisciplineRepository;
 import com.adi.docflow.repository.ProjectDisciplineDocTypeRepository;
 import com.adi.docflow.repository.ProjectMilestoneRepository;
 
+import com.adi.docflow.service.ProjectService;
+
 import com.adi.docflow.web.dto.CreateProjectDTO;
 import com.adi.docflow.web.dto.OrganizationDTO;
 import com.adi.docflow.web.dto.ProjectDTO;
-import com.adi.docflow.web.dto.ProjectListItemDTO;
 import com.adi.docflow.web.dto.ProjectDetailDTO;
-
-import com.adi.docflow.service.ProjectService;
+import com.adi.docflow.web.dto.ProjectListItemDTO;
 
 import jakarta.annotation.security.PermitAll;
 import jakarta.transaction.Transactional;
@@ -43,8 +43,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-
-import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -60,7 +58,7 @@ public class ProjectController {
     private final ProjectDisciplineRepository projDiscRepo;
     private final ProjectDisciplineDocTypeRepository projDiscDocTypeRepo;
     private final ProjectMilestoneRepository milestoneRepo;
-    private final DocumentRepository docRepo;
+    private final DocumentRepository docRepo; // agora fica sem uso, mas não quebra nada
     private final ProjectService projectService;
 
     public ProjectController(
@@ -81,7 +79,6 @@ public class ProjectController {
         this.projectService = projectService;
     }
 
-    // ---- helpers ----
     private static final DateTimeFormatter PT_BR_DATE = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private static LocalDate parseDateOrNull(String s) {
@@ -93,13 +90,12 @@ public class ProjectController {
         }
     }
 
-    // normaliza para código (SLUG MAIÚSCULO sem acentos; espaços/nao-alfanuméricos viram '-')
     private static String slug(String raw) {
         if (raw == null) return "";
         String n = Normalizer.normalize(raw, Normalizer.Form.NFD)
-                .replaceAll("\\p{M}", "");                // remove acentos
-        n = n.replaceAll("[^\\p{Alnum}]+", "-");          // não alfanumérico -> '-'
-        n = n.replaceAll("(^-+|-+$)", "");                // tira hífens das pontas
+                .replaceAll("\\p{M}", "");
+        n = n.replaceAll("[^\\p{Alnum}]+", "-");
+        n = n.replaceAll("(^-+|-+$)", "");
         return n.toUpperCase();
     }
 
@@ -119,24 +115,23 @@ public class ProjectController {
         );
     }
 
-    // ---------- ENDPOINTS ----------
-
-    /** DEV: liberar criação sem JWT para depuração de 403 */
+    // ===========================================================
+    //                     POST CREATE PROJECT
+    // ===========================================================
     @PermitAll
     @PostMapping
     @Transactional
     public ResponseEntity<ProjectDTO> create(@RequestBody CreateProjectDTO dto) {
-        if (dto == null) {
-            throw new ResponseStatusException(BAD_REQUEST, "payload obrigatório");
-        }
-        if (dto.name() == null || dto.name().isBlank()) {
-            throw new ResponseStatusException(BAD_REQUEST, "name é obrigatório");
-        }
-        if (dto.code() == null || dto.code().isBlank()) {
-            throw new ResponseStatusException(BAD_REQUEST, "code é obrigatório");
-        }
 
-        // monta entidade
+        if (dto == null)
+            throw new ResponseStatusException(BAD_REQUEST, "payload obrigatório");
+
+        if (dto.name() == null || dto.name().isBlank())
+            throw new ResponseStatusException(BAD_REQUEST, "name é obrigatório");
+
+        if (dto.code() == null || dto.code().isBlank())
+            throw new ResponseStatusException(BAD_REQUEST, "code é obrigatório");
+
         Project p = new Project();
         p.setCode(dto.code().trim());
         p.setName(dto.name().trim());
@@ -147,76 +142,59 @@ public class ProjectController {
             p.setClient(client);
         }
 
-        p.setDescription(dto.description()); // OK para record
-        p.setStatus(dto.statusInicial());    // pode ser null
+        p.setDescription(dto.description());
+        p.setStatus(dto.statusInicial());
         p.setStartDate(parseDateOrNull(dto.dataInicio()));
         p.setPlannedEndDate(parseDateOrNull(dto.dataPrevistaConclusao()));
         p.setUpdatedAt(Instant.now());
 
-        // salva projeto para obter ID
         Project saved = projectRepo.save(p);
 
-        // ================== DISCIPLINAS (tolerante a DTO leve/rico) ==================
+        // ↓↓↓ DISCIPLINAS ======================================================
         if (dto.disciplinas() != null && !dto.disciplinas().isEmpty()) {
-            for (var d : dto.disciplinas()) {
-                if (d == null) continue;
 
-                // tenta ler por vários nomes de métodos (record/POJO/versão antiga)
-                Long disciplinaId      = tryLong(d, "disciplinaId", "id", "getDisciplinaId", "getId");
-                String disciplinaNome  = tryString(d, "disciplinaNome", "name", "getDisciplinaNome", "getName");
-                Boolean destCliente    = tryBool(d, "destinatarioCliente", "getDestinatarioCliente");
-                Boolean destInterno    = tryBool(d, "destinatarioInterno", "getDestinatarioInterno");
+            for (CreateProjectDTO.DisciplineDTO d : dto.disciplinas()) {
+                if (d == null) continue;
 
                 ProjectDiscipline pd = new ProjectDiscipline();
                 pd.setProject(saved);
-                pd.setDisciplinaId(disciplinaId);
-                pd.setDisciplinaNome(disciplinaNome);
-                pd.setDestinatarioCliente(destCliente);
-                pd.setDestinatarioInterno(destInterno);
+
+                // campos da disciplina
+                pd.setDisciplinaId(d.disciplinaId());      // Long
+                pd.setDisciplinaNome(d.disciplinaNome());  // String
+
+                // agora são Strings (nome/contato do destinatário)
+                pd.setDestinatarioCliente(d.destinatarioCliente());
+                pd.setDestinatarioInterno(d.destinatarioInterno());
+
                 pd = projDiscRepo.save(pd);
 
-                // Tipos/quantidades (se existirem no DTO)
-                List<?> tipos = tryList(d, "tipos", "getTipos");
-                if (tipos != null && !tipos.isEmpty()) {
-                    for (Object t : tipos) {
+                // ------- TIPOS DE DOCUMENTOS POR DISCIPLINA -------
+                if (d.tipos() != null && !d.tipos().isEmpty()) {
+
+                    for (CreateProjectDTO.TipoDTO t : d.tipos()) {
                         if (t == null) continue;
 
-                        String tipo = tryString(t, "tipo", "getTipo");
-                        Integer quantidade = tryInt(t, "quantidade", "getQuantidade");
-                        if (tipo == null || tipo.isBlank()) continue;
+                        String tipoDoc = t.tipo();
+                        if (tipoDoc == null || tipoDoc.isBlank()) continue;
 
-                        final int qtd = (quantidade == null ? 0 : quantidade);
+                        Integer qtdObj = t.quantidade();
+                        int qtd = (qtdObj == null ? 0 : qtdObj);
 
                         ProjectDisciplineDocType dt = new ProjectDisciplineDocType();
                         dt.setProjectDiscipline(pd);
-                        dt.setDocType(tipo.trim());
+                        dt.setDocType(tipoDoc.trim());
                         dt.setQuantity(qtd);
                         projDiscDocTypeRepo.save(dt);
 
-                        // gerar N placeholders na tabela app.document
-                        if (qtd > 0) {
-                            String prefix = slug(tipo);
-                            List<Document> slots = new ArrayList<>(qtd);
-                            for (int i = 1; i <= qtd; i++) {
-                                Document doc = new Document();
-                                doc.setProject(saved);
-                                doc.setTitle(tipo);           // nome do tipo como título
-                                doc.setCode(String.format("%s-%03d", prefix, i));
-                                doc.setRevision("1");
-                                doc.setFormat(null);
-                                doc.setPages(null);
-                                doc.setFileUrl(null);
-                                slots.add(doc);
-                            }
-                            docRepo.saveAll(slots);
-                        }
+                        // ✅ AQUI ERA ONDE CRIAVA DOCUMENTOS NA TABELA DOCUMENT.
+                        // Removido para não gerar mais slots automáticos.
                     }
                 }
             }
         }
-        // ============================================================================
 
-        // marcos contratuais (opcionais)
+        // ↓↓↓ MARCOS ======================================================
         if (dto.marcos() != null && !dto.marcos().isEmpty()) {
             for (var m : dto.marcos()) {
                 if (m == null || m.marcoContratual() == null || m.marcoContratual().isBlank()) continue;
@@ -235,6 +213,10 @@ public class ProjectController {
                 .body(toDTO(saved));
     }
 
+    // ===========================================================
+    //                     GETS
+    // ===========================================================
+
     @GetMapping("/{id}")
     @Transactional(Transactional.TxType.SUPPORTS)
     public ResponseEntity<ProjectDTO> get(@PathVariable("id") Long id) {
@@ -243,16 +225,16 @@ public class ProjectController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    /** Detalhe completo (dados + marcos + documentos) */
-    @GetMapping("/{id}/detail")
-    @Transactional(Transactional.TxType.SUPPORTS)
-    public ResponseEntity<ProjectDetailDTO> getDetail(@PathVariable("id") Long id) {
-        try {
-            return ResponseEntity.ok(projectService.getProjectDetail(id));
-        } catch (NoSuchElementException e) {
-            return ResponseEntity.notFound().build();
-        }
+    @PermitAll
+@GetMapping("/{id}/detail")
+@Transactional(Transactional.TxType.SUPPORTS)
+public ResponseEntity<ProjectDetailDTO> getDetail(@PathVariable("id") Long id) {
+    try {
+        return ResponseEntity.ok(projectService.getProjectDetail(id));
+    } catch (NoSuchElementException e) {
+        return ResponseEntity.notFound().build();
     }
+}
 
     @GetMapping
     @Transactional(Transactional.TxType.SUPPORTS)
@@ -263,6 +245,7 @@ public class ProjectController {
             @PageableDefault(size = 20, sort = "id", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         Page<Project> page;
+
         if (clientId != null) {
             page = projectRepo.findByClientId(clientId, pageable);
         } else if (q != null && !q.isBlank()) {
@@ -283,57 +266,73 @@ public class ProjectController {
         try {
             return projectRepo.findListItemsPage(status, pageable);
         } catch (NoSuchMethodError | org.springframework.dao.InvalidDataAccessApiUsageException e) {
+
             List<ProjectListItemDTO> items = projectRepo.findListItems(status);
             int start = (int) pageable.getOffset();
             int end = Math.min(start + pageable.getPageSize(), items.size());
-            List<ProjectListItemDTO> slice = (start >= items.size()) ? List.of() : items.subList(start, end);
+            List<ProjectListItemDTO> slice =
+                    (start >= items.size()) ? List.of() : items.subList(start, end);
+
             return new PageImpl<>(slice, pageable, items.size());
         }
     }
 
-    /* ==================== HELPERS REFLEXIVOS TOLERANTES ==================== */
+    // ===========================================================
+    //  Helpers de Reflexão (usados pelos GETs da tabela)
+    // ===========================================================
 
     private static String tryString(Object obj, String... methodNames) {
         for (String m : methodNames) {
-            try { var mm = obj.getClass().getMethod(m); var v = mm.invoke(obj); return v == null ? null : v.toString(); }
-            catch (Exception ignored) {}
+            try {
+                var mm = obj.getClass().getMethod(m);
+                var v = mm.invoke(obj);
+                return v == null ? null : v.toString();
+            } catch (Exception ignored) {}
         }
         return null;
     }
+
     private static Long tryLong(Object obj, String... methodNames) {
         for (String m : methodNames) {
             try {
-                var mm = obj.getClass().getMethod(m); Object v = mm.invoke(obj);
+                var mm = obj.getClass().getMethod(m);
+                Object v = mm.invoke(obj);
                 if (v instanceof Number n) return n.longValue();
                 if (v instanceof String s && !s.isBlank()) return Long.parseLong(s);
             } catch (Exception ignored) {}
         }
         return null;
     }
+
     private static Integer tryInt(Object obj, String... methodNames) {
         for (String m : methodNames) {
             try {
-                var mm = obj.getClass().getMethod(m); Object v = mm.invoke(obj);
+                var mm = obj.getClass().getMethod(m);
+                Object v = mm.invoke(obj);
                 if (v instanceof Number n) return n.intValue();
                 if (v instanceof String s && !s.isBlank()) return Integer.parseInt(s);
             } catch (Exception ignored) {}
         }
         return null;
     }
+
     @SuppressWarnings("unchecked")
     private static List<?> tryList(Object obj, String... methodNames) {
         for (String m : methodNames) {
             try {
-                var mm = obj.getClass().getMethod(m); Object v = mm.invoke(obj);
+                var mm = obj.getClass().getMethod(m);
+                Object v = mm.invoke(obj);
                 if (v instanceof List<?> list) return list;
             } catch (Exception ignored) {}
         }
         return null;
     }
+
     private static Boolean tryBool(Object obj, String... methodNames) {
         for (String m : methodNames) {
             try {
-                var mm = obj.getClass().getMethod(m); Object v = mm.invoke(obj);
+                var mm = obj.getClass().getMethod(m);
+                Object v = mm.invoke(obj);
                 if (v instanceof Boolean b) return b;
                 if (v instanceof String s) return Boolean.parseBoolean(s);
                 if (v instanceof Number n) return n.intValue() != 0;

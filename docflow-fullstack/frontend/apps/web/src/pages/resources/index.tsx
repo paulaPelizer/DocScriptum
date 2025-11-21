@@ -5,10 +5,24 @@ import { Link, useNavigate } from "react-router-dom";
 import AppHeader from "@/components/AppHeader";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,7 +50,7 @@ import {
 
 import { apiGet } from "@/services/api";
 
-/** ==== Tipos ==== */
+/* ===== Tipos ===== */
 type OrgType = "client" | "supplier" | "internal";
 
 type Resource = {
@@ -54,7 +68,7 @@ type Resource = {
   tags?: string[];
 };
 
-/** ==== Utilidades ==== */
+/* ===== Utilidades ===== */
 const FILTER_OPTIONS = [
   { key: "name", label: "Nome" },
   { key: "role", label: "Papel" },
@@ -67,6 +81,7 @@ const FILTER_OPTIONS = [
   { key: "status", label: "Status" },
   { key: "tags", label: "Tags" },
 ] as const;
+
 type FilterKey = (typeof FILTER_OPTIONS)[number]["key"];
 
 function norm(s: string | null | undefined) {
@@ -82,7 +97,6 @@ function statusVariant(s?: Resource["status"]) {
   return v === "ativo" ? "default" : "secondary";
 }
 
-// mapeia o DTO do backend => Resource da UI
 function mapResourceFromApi(raw: any): Resource {
   const typeStr = String(raw.partnershipType ?? "").toUpperCase();
   const orgType: OrgType =
@@ -106,7 +120,6 @@ function mapResourceFromApi(raw: any): Resource {
     orgName: raw.partnershipName ?? null,
     status,
     tags: Array.isArray(raw.tags) ? raw.tags : [],
-    // por enquanto sem vínculos reais
     projects: [],
     requests: [],
     documents: [],
@@ -124,7 +137,7 @@ export default function ResourcesPage() {
   const ALL_FIELDS = FILTER_OPTIONS.map((o) => o.key) as FilterKey[];
   const [selectedFields, setSelectedFields] = useState<FilterKey[]>(ALL_FIELDS);
 
-  // carrega do backend
+  /* ===== Carregar backend ===== */
   useEffect(() => {
     let aborted = false;
 
@@ -135,13 +148,12 @@ export default function ResourcesPage() {
 
         const data = await apiGet<any[]>("/api/v1/resources");
         const arr = Array.isArray(data) ? data : [];
-
         const mapped = arr.map(mapResourceFromApi);
-        if (!aborted) {
-          setResources(mapped);
-        }
+
+        if (!aborted) setResources(mapped);
       } catch (e) {
         console.error("Falha ao carregar recursos:", e);
+
         if (!aborted) {
           setLoadError("Não foi possível carregar os recursos.");
           setResources([]);
@@ -156,6 +168,7 @@ export default function ResourcesPage() {
     };
   }, []);
 
+  /* ===== Busca ===== */
   const fieldValue = (r: Resource, key: FilterKey): string => {
     switch (key) {
       case "name":
@@ -173,6 +186,7 @@ export default function ResourcesPage() {
             : r.orgType === "supplier"
             ? "fornecedor"
             : "interno";
+
         return [t, r.orgName].map(norm).join(" ");
       }
       case "projects":
@@ -190,10 +204,13 @@ export default function ResourcesPage() {
 
   const rows = useMemo(() => {
     const query = norm(q);
-    const source = resources;
-    if (!query) return source;
+    if (!query) return resources;
+
     const fields = selectedFields.length ? selectedFields : ALL_FIELDS;
-    return source.filter((r) => fields.some((f) => fieldValue(r, f).includes(query)));
+
+    return resources.filter((r) =>
+      fields.some((f) => fieldValue(r, f).includes(query))
+    );
   }, [q, selectedFields, resources]);
 
   const toggleField = (key: FilterKey, checked: boolean) => {
@@ -201,12 +218,14 @@ export default function ResourcesPage() {
       checked ? [...new Set([...prev, key])] : prev.filter((k) => k !== key)
     );
   };
+
   const clearAll = () => setSelectedFields([]);
   const selectAll = () => setSelectedFields(ALL_FIELDS);
 
   return (
     <div className="flex min-h-screen flex-col">
       <AppHeader />
+
       <main className="flex-1 p-4 md:p-6">
         <div className="container mx-auto">
           <PageHeader
@@ -224,6 +243,7 @@ export default function ResourcesPage() {
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
                 />
+
                 {q && (
                   <button
                     type="button"
@@ -243,9 +263,11 @@ export default function ResourcesPage() {
                     <FilterIcon className="mr-2 h-4 w-4" /> Filtros
                   </Button>
                 </DropdownMenuTrigger>
+
                 <DropdownMenuContent align="end" className="w-64">
                   <DropdownMenuLabel>Filtros</DropdownMenuLabel>
                   <DropdownMenuSeparator />
+
                   {FILTER_OPTIONS.map((opt) => (
                     <DropdownMenuCheckboxItem
                       key={opt.key}
@@ -256,7 +278,9 @@ export default function ResourcesPage() {
                       {opt.label}
                     </DropdownMenuCheckboxItem>
                   ))}
+
                   <DropdownMenuSeparator />
+
                   <div className="px-2 py-1.5 flex items-center justify-between">
                     <Button variant="ghost" size="sm" onClick={clearAll}>
                       Limpar
@@ -273,16 +297,19 @@ export default function ResourcesPage() {
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              {/* Novo recurso */}
-              <Button onClick={() => navigate("/resources/new")} aria-label="Criar novo recurso">
+              {/* Novo Recurso */}
+              <Button onClick={() => navigate("/resources/new")}>
                 <Plus className="mr-2 h-4 w-4" /> Novo Recurso
               </Button>
             </div>
           </PageHeader>
 
           {loading && (
-            <p className="text-sm text-muted-foreground mb-2">Carregando recursos...</p>
+            <p className="text-sm text-muted-foreground mb-2">
+              Carregando recursos...
+            </p>
           )}
+
           {loadError && (
             <p className="text-sm text-red-500 mb-2">{loadError}</p>
           )}
@@ -294,7 +321,7 @@ export default function ResourcesPage() {
   );
 }
 
-/** ==== Tabela compacta ==== */
+/* ===== Tabela ===== */
 function ResourceTable({ rows }: { rows: Resource[] }) {
   const labelByOrg: Record<OrgType, string> = {
     client: "Cliente",
@@ -303,11 +330,12 @@ function ResourceTable({ rows }: { rows: Resource[] }) {
   };
 
   return (
-    <Card className="neon-border">
+    <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md shadow-lg">
       <CardHeader className="py-4">
         <CardTitle className="text-lg">Lista de Recursos</CardTitle>
         <CardDescription className="text-sm">
-          Contatos/usuários relacionados a clientes, fornecedores, projetos, solicitações e documentos
+          Contatos/usuários relacionados a clientes, fornecedores, projetos,
+          solicitações e documentos
         </CardDescription>
       </CardHeader>
 
@@ -320,8 +348,12 @@ function ResourceTable({ rows }: { rows: Resource[] }) {
               <TableHead className="w-[220px]">Contato</TableHead>
               <TableHead className="w-[200px]">Parceria</TableHead>
               <TableHead className="w-[90px]">Proj.</TableHead>
-              <TableHead className="hidden lg:table-cell w-[90px]">Solic.</TableHead>
-              <TableHead className="hidden lg:table-cell w-[90px]">Docs</TableHead>
+              <TableHead className="hidden lg:table-cell w-[90px]">
+                Solic.
+              </TableHead>
+              <TableHead className="hidden lg:table-cell w-[90px]">
+                Docs
+              </TableHead>
               <TableHead className="w-[90px]">Status</TableHead>
               <TableHead className="text-right w-[70px]">Ações</TableHead>
             </TableRow>
@@ -349,6 +381,7 @@ function ResourceTable({ rows }: { rows: Resource[] }) {
                     <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                     <span className="text-xs truncate">{r.email}</span>
                   </div>
+
                   {r.phone && (
                     <div className="flex items-center gap-2 min-w-0 mt-0.5">
                       <Phone className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
@@ -391,7 +424,10 @@ function ResourceTable({ rows }: { rows: Resource[] }) {
                 </TableCell>
 
                 <TableCell>
-                  <Badge variant={statusVariant(r.status) as any} className="px-2 py-0 h-6">
+                  <Badge
+                    variant={statusVariant(r.status) as any}
+                    className="px-2 py-0 h-6"
+                  >
                     {r.status ?? "—"}
                   </Badge>
                 </TableCell>
@@ -403,31 +439,47 @@ function ResourceTable({ rows }: { rows: Resource[] }) {
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
+
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem asChild>
                         <Link to={`/resources/${r.id}`}>Ver detalhes</Link>
                       </DropdownMenuItem>
+
                       <DropdownMenuItem asChild>
                         <Link to={`/resources/${r.id}/edit`}>Editar</Link>
                       </DropdownMenuItem>
+
                       <DropdownMenuSeparator />
+
                       <DropdownMenuItem asChild>
-                        <Link to={`/projects?resource=${r.id}`}>Ver projetos</Link>
+                        <Link to={`/projects?resource=${r.id}`}>
+                          Ver projetos
+                        </Link>
                       </DropdownMenuItem>
+
                       <DropdownMenuItem asChild>
-                        <Link to={`/requests?resource=${r.id}`}>Ver solicitações</Link>
+                        <Link to={`/requests?resource=${r.id}`}>
+                          Ver solicitações
+                        </Link>
                       </DropdownMenuItem>
+
                       <DropdownMenuItem asChild>
-                        <Link to={`/documents?resource=${r.id}`}>Ver documentos</Link>
+                        <Link to={`/documents?resource=${r.id}`}>
+                          Ver documentos
+                        </Link>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
               </TableRow>
             ))}
+
             {rows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-6 text-muted-foreground">
+                <TableCell
+                  colSpan={9}
+                  className="text-center py-6 text-muted-foreground"
+                >
                   Nenhum recurso encontrado.
                 </TableCell>
               </TableRow>

@@ -13,27 +13,71 @@ export default function ProjectPlanningPage() {
   const params = useParams()
 
   const milestones = [
-    { id: 1, name: "Entrega Inicial", dueDate: "15/04/2025", status: "Concluído", progress: 100, documentsTotal: 6, documentsDelivered: 6, daysUntilDue: -5 },
-    { id: 2, name: "Projetos Complementares", dueDate: "30/05/2025", status: "Em andamento", progress: 75, documentsTotal: 8, documentsDelivered: 6, daysUntilDue: 15 },
-    { id: 3, name: "Documentação Executiva", dueDate: "15/07/2025", status: "Atrasado", progress: 25, documentsTotal: 6, documentsDelivered: 1, daysUntilDue: -3 },
-    { id: 4, name: "Entrega Final", dueDate: "30/09/2025", status: "Pendente", progress: 0, documentsTotal: 4, documentsDelivered: 0, daysUntilDue: 120 },
+    {
+      id: 1,
+      name: "Entrega Inicial",
+      dueDate: "15/04/2025",
+      status: "Concluído",
+      progress: 100,
+      documentsTotal: 6,
+      documentsDelivered: 6,
+      daysUntilDue: -5,
+    },
+    {
+      id: 2,
+      name: "Projetos Complementares",
+      dueDate: "30/05/2025",
+      status: "Em andamento",
+      progress: 75,
+      documentsTotal: 8,
+      documentsDelivered: 6,
+      daysUntilDue: 15,
+    },
+    {
+      id: 3,
+      name: "Documentação Executiva",
+      dueDate: "15/07/2025",
+      status: "Atrasado",
+      progress: 25,
+      documentsTotal: 6,
+      documentsDelivered: 1,
+      daysUntilDue: -3,
+    },
+    {
+      id: 4,
+      name: "Entrega Final",
+      dueDate: "30/09/2025",
+      status: "Pendente",
+      progress: 0,
+      documentsTotal: 4,
+      documentsDelivered: 0,
+      daysUntilDue: 120,
+    },
   ]
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "Concluído": return <CheckCircle className="h-4 w-4 text-green-500" />
-      case "Em andamento": return <Clock className="h-4 w-4 text-blue-500" />
-      case "Atrasado": return <AlertTriangle className="h-4 w-4 text-red-500" />
-      default: return <Clock className="h-4 w-4 text-gray-500" />
+      case "Concluído":
+        return <CheckCircle className="h-4 w-4 text-green-500" />
+      case "Em andamento":
+        return <Clock className="h-4 w-4 text-blue-500" />
+      case "Atrasado":
+        return <AlertTriangle className="h-4 w-4 text-red-500" />
+      default:
+        return <Clock className="h-4 w-4 text-gray-500" />
     }
   }
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "Concluído": return "default"
-      case "Em andamento": return "secondary"
-      case "Atrasado": return "destructive"
-      default: return "outline"
+      case "Concluído":
+        return "default"
+      case "Em andamento":
+        return "secondary"
+      case "Atrasado":
+        return "destructive"
+      default:
+        return "outline"
     }
   }
 
@@ -44,7 +88,10 @@ export default function ProjectPlanningPage() {
 
       <main className="flex-1 p-4 md:p-6">
         <div className="container mx-auto max-w-6xl">
-          <PageHeader title="Planejamento - Projeto Alpha" description="Cronograma e marcos contratuais do projeto">
+          <PageHeader
+            title="Planejamento - Projeto Alpha"
+            description="Cronograma e marcos contratuais do projeto"
+          >
             <Link to="/projects">
               <Button variant="outline">
                 <ArrowLeft className="mr-2 h-4 w-4" />
@@ -62,7 +109,7 @@ export default function ProjectPlanningPage() {
             <TabsContent value="timeline" className="space-y-6">
               {/* Resumo do Projeto */}
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card className="neon-border">
+                <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Total de Marcos</CardTitle>
                     <Calendar className="h-4 w-4 text-primary" />
@@ -72,7 +119,8 @@ export default function ProjectPlanningPage() {
                     <p className="text-xs text-muted-foreground">1 concluído, 2 em andamento</p>
                   </CardContent>
                 </Card>
-                <Card className="neon-border">
+
+                <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Documentos</CardTitle>
                     <CheckCircle className="h-4 w-4 text-primary" />
@@ -82,7 +130,8 @@ export default function ProjectPlanningPage() {
                     <p className="text-xs text-muted-foreground">54% entregues</p>
                   </CardContent>
                 </Card>
-                <Card className="neon-border">
+
+                <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Próximo Marco</CardTitle>
                     <Clock className="h-4 w-4 text-primary" />
@@ -92,7 +141,8 @@ export default function ProjectPlanningPage() {
                     <p className="text-xs text-muted-foreground">Projetos Complementares</p>
                   </CardContent>
                 </Card>
-                <Card className="neon-border">
+
+                <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Status Geral</CardTitle>
                     <AlertTriangle className="h-4 w-4 text-primary" />
@@ -105,7 +155,7 @@ export default function ProjectPlanningPage() {
               </div>
 
               {/* Cronograma de Marcos */}
-              <Card className="neon-border">
+              <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
                 <CardHeader>
                   <CardTitle>Marcos Contratuais</CardTitle>
                   <CardDescription>Cronograma de entregas e status atual</CardDescription>
@@ -120,8 +170,12 @@ export default function ProjectPlanningPage() {
                             <h3 className="font-medium">{milestone.name}</h3>
                           </div>
                           <div className="flex items-center gap-2">
-                            <Badge variant={getStatusColor(milestone.status)}>{milestone.status}</Badge>
-                            <span className="text-sm text-muted-foreground">{milestone.dueDate}</span>
+                            <Badge variant={getStatusColor(milestone.status)}>
+                              {milestone.status}
+                            </Badge>
+                            <span className="text-sm text-muted-foreground">
+                              {milestone.dueDate}
+                            </span>
                           </div>
                         </div>
                         <div className="space-y-2">
@@ -139,8 +193,8 @@ export default function ProjectPlanningPage() {
                             {milestone.daysUntilDue > 0
                               ? `${milestone.daysUntilDue} dias restantes`
                               : milestone.daysUntilDue < 0
-                                ? `${Math.abs(milestone.daysUntilDue)} dias de atraso`
-                                : "Vence hoje"}
+                              ? `${Math.abs(milestone.daysUntilDue)} dias de atraso`
+                              : "Vence hoje"}
                           </span>
                         </div>
                       </div>
@@ -153,7 +207,7 @@ export default function ProjectPlanningPage() {
             <TabsContent value="analytics" className="space-y-6">
               {/* Métricas de Performance */}
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <Card className="neon-border">
+                <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
                   <CardHeader>
                     <CardTitle className="text-sm">Taxa de Entrega no Prazo</CardTitle>
                   </CardHeader>
@@ -162,7 +216,8 @@ export default function ProjectPlanningPage() {
                     <p className="text-sm text-muted-foreground">8 de 12 documentos</p>
                   </CardContent>
                 </Card>
-                <Card className="neon-border">
+
+                <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
                   <CardHeader>
                     <CardTitle className="text-sm">Atraso Médio</CardTitle>
                   </CardHeader>
@@ -171,7 +226,8 @@ export default function ProjectPlanningPage() {
                     <p className="text-sm text-muted-foreground">Para documentos atrasados</p>
                   </CardContent>
                 </Card>
-                <Card className="neon-border">
+
+                <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
                   <CardHeader>
                     <CardTitle className="text-sm">Marcos em Risco</CardTitle>
                   </CardHeader>
@@ -183,7 +239,7 @@ export default function ProjectPlanningPage() {
               </div>
 
               {/* Identificação de Erosões */}
-              <Card className="neon-border">
+              <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
                 <CardHeader>
                   <CardTitle>Identificação de Erosões</CardTitle>
                   <CardDescription>Documentos e marcos com risco de atraso</CardDescription>
@@ -193,7 +249,8 @@ export default function ProjectPlanningPage() {
                     <div className="border-l-4 border-red-500 pl-4 py-2">
                       <h4 className="font-medium text-red-700">Alto Risco</h4>
                       <p className="text-sm text-muted-foreground">
-                        Marco "Documentação Executiva" com 3 dias de atraso e apenas 25% de progresso
+                        Marco &quot;Documentação Executiva&quot; com 3 dias de atraso e apenas
+                        25% de progresso
                       </p>
                       <div className="mt-2">
                         <Badge variant="destructive">Ação Imediata Necessária</Badge>
@@ -202,7 +259,8 @@ export default function ProjectPlanningPage() {
                     <div className="border-l-4 border-yellow-500 pl-4 py-2">
                       <h4 className="font-medium text-yellow-700">Médio Risco</h4>
                       <p className="text-sm text-muted-foreground">
-                        Marco "Projetos Complementares" com 15 dias restantes e 75% de progresso
+                        Marco &quot;Projetos Complementares&quot; com 15 dias restantes e 75% de
+                        progresso
                       </p>
                       <div className="mt-2">
                         <Badge variant="secondary">Monitoramento Necessário</Badge>

@@ -11,8 +11,16 @@ public class ProjectDetailDTO {
     private String status;
     private String startDate;            // dd/MM/yyyy
     private String plannedEndDate;       // dd/MM/yyyy
+
+    // Marcos contratuais
     private List<MilestoneDTO> milestones;
+
+    // Documentos reais (pode continuar sendo usado em outra parte do sistema, se precisar)
     private List<DocumentDTO> documents;
+
+    // ✅ NOVO: tipos de documentos previstos por disciplina do projeto
+    // (virão da tabela project_discipline_doc_type)
+    private List<ProjectDocTypeDTO> plannedDocTypes;
 
     public ProjectDetailDTO() {}
 
@@ -61,4 +69,14 @@ public class ProjectDetailDTO {
 
     public List<DocumentDTO> getDocuments() { return documents; }
     public void setDocuments(List<DocumentDTO> documents) { this.documents = documents; }
+
+    // ✅ getters/setters para os tipos previstos
+
+    public List<ProjectDocTypeDTO> getPlannedDocTypes() {
+        return plannedDocTypes;
+    }
+
+    public void setPlannedDocTypes(List<ProjectDocTypeDTO> plannedDocTypes) {
+        this.plannedDocTypes = plannedDocTypes;
+    }
 }

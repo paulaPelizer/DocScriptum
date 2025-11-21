@@ -1,58 +1,190 @@
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Download, Printer, FileText, Building, Calendar, User } from "lucide-react";
-import { Link } from "react-router-dom";
-import AppHeader from "@/components/AppHeader";
-import { PageHeader } from "@/components/page-header";
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
+import {
+  ArrowLeft,
+  Download,
+  Printer,
+  FileText,
+  Building,
+  Calendar,
+  User,
+} from "lucide-react"
+import { Link } from "react-router-dom"
+import AppHeader from "@/components/AppHeader"
+import { PageHeader } from "@/components/page-header"
 
 export default function GRDViewPage() {
-  // Dados simulados da GRD
+  // ===== DADOS MOKADOS ALINHADOS À TABELA DE TIPOS DOCUMENTAIS / TEMPORALIDADE =====
   const grd = {
-    number: "GRD-ABC-XYZ-2025001",
-    date: "10/05/2025",
-    protocol: "PROT-2025-001234",
-    project: "Projeto Alpha",
+    number: "GRD-TTD-ALPHA-2025-001",
+    date: "20/05/2025",
+    protocol: "PRT-2025-004210",
+    project: "Projeto Alpha – Subestação 230kV",
     origin: {
-      name: "Empresa ABC",
-      type: "Cliente",
-      contact: "João Silva",
-      email: "joao@empresaabc.com",
-      phone: "(11) 9999-9999",
-      address: "Rua das Empresas, 123 - Centro - São Paulo/SP",
+      name: "DOCScriptum / Doc Control",
+      type: "Interno",
+      contact: "Paula Dantas – Coordenação de Documentos",
+      email: "doccontrol@docscriptum.app",
+      phone: "(11) 4000-2300",
+      address: "Centro de Engenharia de Documentos – São Paulo/SP",
     },
     destination: {
-      name: "Construtora XYZ",
-      type: "Fornecedor",
-      contact: "Carlos Mendes",
-      email: "carlos@construtoraXYZ.com",
-      phone: "(11) 5555-5555",
-      address: "Av. das Construções, 456 - Industrial - São Paulo/SP",
+      name: "Empresa ABC Energia",
+      type: "Cliente",
+      contact: "João Batista – Eng. Fiscal",
+      email: "joao.batista@abcenergia.com",
+      phone: "(11) 98888-1122",
+      address: "Av. Paulista, 1500 – Bela Vista – São Paulo/SP",
     },
-    purpose: "Aprovação inicial dos documentos do projeto",
-    deliveryMethod: "Entrega Pessoal",
+    purpose:
+      "Envio de conjunto documental alinhado à Tabela de Temporalidade do DOCScriptum, para análise, aceite contratual e guarda arquivística.",
+    deliveryMethod: "Upload pelo Portal DOCScriptum (GRD eletrônica)",
     documents: [
-      { id: 1, code: "DOC-001", name: "Planta Baixa - Térreo", revision: "Rev. 2", format: "A1", pages: 1 },
-      { id: 2, code: "DOC-002", name: "Memorial Descritivo", revision: "Rev. 1", format: "A4", pages: 15 },
-      { id: 3, code: "DOC-004", name: "Cronograma Executivo", revision: "Rev. 1", format: "A4", pages: 3 },
-    ],
-    observations: "Documentos para aprovação inicial. Prazo de retorno: 5 dias úteis.",
-    status: "Emitida",
-    emittedBy: "Sistema DocFlow",
-    emissionDate: "10/05/2025 14:30",
-  };
+      // 1) Gestão de Documentos e Protocolo
+      {
+        id: 1,
+        code: "GRD-REM-001",
+        name: "GRD de Remessa de Documentação – Marco 2",
+        revision: "Rev. 0",
+        format: "PDF (A4)",
+        pages: 4,
+      },
+      {
+        id: 2,
+        code: "AR-REC-002",
+        name: "AR de Recebimento – Confirmação Cliente",
+        revision: "Rev. 0",
+        format: "PDF (A4)",
+        pages: 2,
+      },
+      {
+        id: 3,
+        code: "TER-DEV-003",
+        name: "Termo de Devolução de Documentos – Revisão Projeto Básico",
+        revision: "Rev. 1",
+        format: "PDF (A4)",
+        pages: 3,
+      },
+      {
+        id: 4,
+        code: "GUI-REC-004",
+        name: "Guia de Recolhimento – Encerramento Marco Anterior",
+        revision: "Rev. 0",
+        format: "PDF (A4)",
+        pages: 2,
+      },
 
-  const totalPages = grd.documents.reduce((sum, doc) => sum + doc.pages, 0);
+      // 2) Gestão de Projetos de TI e Engenharia de Software
+      {
+        id: 5,
+        code: "CTD-PRJ-005",
+        name: "Catálogo de Tipos Documentais – Projeto Alpha",
+        revision: "Rev. 2",
+        format: "PDF (A4)",
+        pages: 18,
+      },
+      {
+        id: 6,
+        code: "PLN-PRJ-006",
+        name: "Plano de Projeto – Cronograma Executivo",
+        revision: "Rev. 3",
+        format: "PDF (A4)",
+        pages: 12,
+      },
+      {
+        id: 7,
+        code: "MAR-CTT-007",
+        name: "Registro de Marco Contratual – Entrega Parcial",
+        revision: "Rev. 0",
+        format: "PDF (A4)",
+        pages: 5,
+      },
+
+      // 3) Desenvolvimento e Manutenção de Sistemas
+      {
+        id: 8,
+        code: "SRS-SIS-008",
+        name: "Documento de Requisitos (SRS) – Sistema de Supervisão",
+        revision: "Rev. 1",
+        format: "PDF (A4)",
+        pages: 36,
+      },
+      {
+        id: 9,
+        code: "STD-SIS-009",
+        name: "Documento de Testes (STD) – Cenários Integrados",
+        revision: "Rev. 0",
+        format: "PDF (A4)",
+        pages: 22,
+      },
+
+      // 4) Documentação Técnica e Científica Final
+      {
+        id: 10,
+        code: "REL-TEC-010",
+        name: "Relatório Técnico Parcial – Ensaios Funcionais",
+        revision: "Rev. 0",
+        format: "PDF (A4)",
+        pages: 27,
+      },
+
+      // 5) Administração / Infra + Cadastro Institucional
+      {
+        id: 11,
+        code: "CTR-PRJ-011",
+        name: "Contrato de Projeto – Adendo Técnico 01",
+        revision: "Rev. 1",
+        format: "PDF (A4)",
+        pages: 14,
+      },
+      {
+        id: 12,
+        code: "CAD-CLI-012",
+        name: "Cadastro de Cliente – Empresa ABC Energia",
+        revision: "Rev. 0",
+        format: "PDF (A4)",
+        pages: 6,
+      },
+
+      // 7) Preservação Digital e Recolhimento Arquivístico
+      {
+        id: 13,
+        code: "OAIS-AIP-013",
+        name: "Pacote OAIS (AIP) – Conjunto de Documentos do Marco 2",
+        revision: "Rev. 0",
+        format: "ZIP / AIP",
+        pages: 0, // pacote lógico
+      },
+      {
+        id: 14,
+        code: "LOG-PRES-014",
+        name: "Log de Preservação Digital – Operações de Ingestão",
+        revision: "Rev. 0",
+        format: "TXT / JSON",
+        pages: 0,
+      },
+    ],
+    observations:
+      "Conjunto contempla tipos documentais de protocolo, projeto, desenvolvimento de sistemas, documentação técnica, contratos, cadastros e preservação digital, conforme Tabela de Temporalidade do DOCScriptum.",
+    status: "Emitida",
+    emittedBy: "Sistema DOCScriptum",
+    emissionDate: "20/05/2025 11:27",
+  }
+
+  const totalPages = grd.documents.reduce((sum, doc) => sum + (doc.pages || 0), 0)
 
   return (
     <div className="flex min-h-screen flex-col">
-      {/* topo fixo padronizado com efeito vidro */}
       <AppHeader />
 
       <main className="flex-1 p-4 md:p-6">
         <div className="container mx-auto max-w-4xl">
-          <PageHeader title={`GRD ${grd.number}`} description="Guia de Remessa de Documentação">
+          <PageHeader
+            title={`GRD ${grd.number}`}
+            description="Guia de Remessa de Documentação alinhada à Tabela de Temporalidade e aos tipos documentais do projeto."
+          >
             <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-end w-full">
               <Link to="/grds">
                 <Button variant="outline">
@@ -72,10 +204,12 @@ export default function GRDViewPage() {
           </PageHeader>
 
           <div className="space-y-6">
-            {/* Cabeçalho da GRD */}
-            <Card className="neon-border">
+            {/* CABEÇALHO DA GRD */}
+            <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
               <CardHeader className="text-center">
-                <CardTitle className="text-2xl neon-text">GUIA DE REMESSA DE DOCUMENTAÇÃO</CardTitle>
+                <CardTitle className="text-2xl neon-text">
+                  GUIA DE REMESSA DE DOCUMENTAÇÃO
+                </CardTitle>
                 <div className="flex justify-center gap-4 mt-4">
                   <Badge variant="default" className="text-lg px-4 py-2">
                     {grd.number}
@@ -106,9 +240,9 @@ export default function GRDViewPage() {
               </CardContent>
             </Card>
 
-            {/* Origem e Destino */}
+            {/* ORIGEM E DESTINO */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="neon-border">
+              <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Building className="h-5 w-5" />
@@ -125,8 +259,12 @@ export default function GRDViewPage() {
                       <User className="h-4 w-4 text-muted-foreground" />
                       <strong>Contato:</strong> {grd.origin.contact}
                     </p>
-                    <p className="text-sm text-muted-foreground">Email: {grd.origin.email}</p>
-                    <p className="text-sm text-muted-foreground">Telefone: {grd.origin.phone}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Email: {grd.origin.email}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Telefone: {grd.origin.phone}
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm">
@@ -138,7 +276,7 @@ export default function GRDViewPage() {
                 </CardContent>
               </Card>
 
-              <Card className="neon-border">
+              <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Building className="h-5 w-5" />
@@ -155,8 +293,12 @@ export default function GRDViewPage() {
                       <User className="h-4 w-4 text-muted-foreground" />
                       <strong>Contato:</strong> {grd.destination.contact}
                     </p>
-                    <p className="text-sm text-muted-foreground">Email: {grd.destination.email}</p>
-                    <p className="text-sm text-muted-foreground">Telefone: {grd.destination.phone}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Email: {grd.destination.email}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Telefone: {grd.destination.phone}
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm">
@@ -169,8 +311,8 @@ export default function GRDViewPage() {
               </Card>
             </div>
 
-            {/* Detalhes da Remessa */}
-            <Card className="neon-border">
+            {/* DETALHES DA REMESSA */}
+            <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
               <CardHeader>
                 <CardTitle>DETALHES DA REMESSA</CardTitle>
               </CardHeader>
@@ -181,7 +323,7 @@ export default function GRDViewPage() {
                     <p className="font-medium">{grd.purpose}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Método de Entrega</p>
+                    <p className="text-sm text-muted-foreground">Método de Envio</p>
                     <p className="font-medium">{grd.deliveryMethod}</p>
                   </div>
                 </div>
@@ -194,8 +336,8 @@ export default function GRDViewPage() {
               </CardContent>
             </Card>
 
-            {/* Lista de Documentos */}
-            <Card className="neon-border">
+            {/* DOCUMENTOS TRAMITADOS */}
+            <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <FileText className="h-5 w-5" />
@@ -205,7 +347,10 @@ export default function GRDViewPage() {
               <CardContent>
                 <div className="space-y-3">
                   {grd.documents.map((doc, index) => (
-                    <div key={doc.id} className="flex items-center justify-between border rounded-lg p-4">
+                    <div
+                      key={doc.id}
+                      className="flex items-center justify-between border border-border/60 bg-card/60 rounded-lg p-4"
+                    >
                       <div className="flex items-center gap-3">
                         <Badge variant="outline" className="font-bold">
                           {String(index + 1).padStart(2, "0")}
@@ -215,7 +360,10 @@ export default function GRDViewPage() {
                             {doc.code} - {doc.name}
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            {doc.revision} • Formato: {doc.format} • {doc.pages} página{doc.pages > 1 ? "s" : ""}
+                            {doc.revision} • Formato: {doc.format} •{" "}
+                            {doc.pages > 0
+                              ? `${doc.pages} página${doc.pages > 1 ? "s" : ""}`
+                              : "conteúdo digital não paginado"}
                           </p>
                         </div>
                       </div>
@@ -235,29 +383,31 @@ export default function GRDViewPage() {
               </CardContent>
             </Card>
 
-            {/* Assinaturas */}
-            <Card className="neon-border">
+            {/* ASSINATURA */}
+            <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
               <CardHeader>
                 <CardTitle>ASSINATURA DO REMETENTE</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div>
-                    <p className="font-medium">REMETENTE</p>
-                    <div className="border-b border-muted-foreground mt-8 mb-2"></div>
-                    <p className="text-sm text-muted-foreground">Assinatura e Data</p>
+                    <p className="font-medium">RESPONSÁVEL PELA REMESSA</p>
+                    <div className="border-b border-muted-foreground mt-8 mb-2" />
+                    <p className="text-sm text-muted-foreground">Assinatura e data</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Rodapé */}
-            <Card className="neon-border">
+            {/* RODAPÉ */}
+            <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
               <CardContent className="pt-6">
                 <div className="text-center text-sm text-muted-foreground space-y-1">
                   <p>Emitido por: {grd.emittedBy}</p>
                   <p>Data/Hora de Emissão: {grd.emissionDate}</p>
-                  <p className="font-medium">DocFlow - Sistema de Gestão de Documentos Técnicos</p>
+                  <p className="font-medium">
+                    DOCScriptum — Sistema de Governança Documental
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -265,5 +415,5 @@ export default function GRDViewPage() {
         </div>
       </main>
     </div>
-  );
+  )
 }

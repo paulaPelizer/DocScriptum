@@ -1,62 +1,72 @@
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { ArrowLeft, Search, Plus, FileText } from "lucide-react"
-import { Link } from 'react-router-dom'
-import { useParams } from "react-router-dom"
+// src/pages/projects/[id]/documents/index.tsx
+import { useEffect, useMemo, useState } from "react"
+import { Link, useParams } from "react-router-dom"
+
 import AppHeader from "@/components/AppHeader"
 import { PageHeader } from "@/components/page-header"
 
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+
+import { ArrowLeft, Search, FileText } from "lucide-react"
+
+import { getProjectDetail, ProjectDetail, ProjectDocType } from "@/services/projects"
+
 export default function ProjectDocumentsPage() {
-  const params = useParams()
+  const { id } = useParams<{ id: string }>()
+  const [project, setProject] = useState<ProjectDetail | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [search, setSearch] = useState("")
 
-  const documents = [
-    {
-      id: 1,
-      code: "DOC-001",
-      name: "Planta Baixa - Térreo",
-      type: "Planta Baixa",
-      revision: "Rev. 2",
-      status: "Aprovado",
-      milestone: "Entrega Inicial",
-      lastUpdated: "12/04/2025",
-    },
-    {
-      id: 2,
-      code: "DOC-002",
-      name: "Memorial Descritivo",
-      type: "Memorial",
-      revision: "Rev. 1",
-      status: "Em revisão",
-      milestone: "Entrega Inicial",
-      lastUpdated: "18/04/2025",
-    },
-    {
-      id: 3,
-      code: "DOC-003",
-      name: "Projeto Estrutural",
-      type: "Projeto Estrutural",
-      revision: "Rev. 3",
-      status: "Aguardando aprovação",
-      milestone: "Projetos Complementares",
-      lastUpdated: "20/04/2025",
-    },
-  ]
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Aprovado":
-        return "default"
-      case "Em revisão":
-        return "secondary"
-      case "Aguardando aprovação":
-        return "outline"
-      default:
-        return "outline"
+  useEffect(() => {
+    if (!id) {
+      setError("Projeto não informado.")
+      setLoading(false)
+      return
     }
-  }
+
+    const projectId = Number(id)
+    if (Number.isNaN(projectId)) {
+      setError("ID de projeto inválido.")
+      setLoading(false)
+      return
+    }
+
+    setLoading(true)
+    setError(null)
+
+    getProjectDetail(projectId)
+      .then((data) => {
+        // DEBUG: ver no console se o back está trazendo plannedDocTypes
+        console.log("Project detail (documents page):", data)
+        setProject(data)
+      })
+      .catch((err) => {
+        console.error("Erro ao carregar detalhes do projeto:", err)
+        setError("Erro ao carregar os dados do projeto.")
+      })
+      .finally(() => {
+        setLoading(false)
+      })
+  }, [id])
+
+  // lista de tipos previstos vindos do backend
+  const plannedDocTypes: ProjectDocType[] = project?.plannedDocTypes ?? []
+
+  const filteredDocTypes = useMemo(() => {
+    if (!search.trim()) return plannedDocTypes
+
+    const s = search.toLowerCase()
+
+    return plannedDocTypes.filter((d) => {
+      const disc = d.disciplineName?.toLowerCase() ?? ""
+      const tipo = d.docType?.toLowerCase() ?? ""
+      return disc.includes(s) || tipo.includes(s)
+    })
+  }, [plannedDocTypes, search])
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -65,7 +75,14 @@ export default function ProjectDocumentsPage() {
 
       <main className="flex-1 p-4 md:p-6">
         <div className="container mx-auto max-w-6xl">
-          <PageHeader title="Documentos - Projeto Alpha" description="Lista de documentos do projeto">
+          <PageHeader
+            title={
+              project
+                ? `Documentos - ${project.name}`
+                : "Documentos do Projeto"
+            }
+            description="Lista de tipos de documentos previstos para este projeto."
+          >
             <div className="w-full sm:w-auto flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-end">
               <Link to="/projects">
                 <Button variant="outline">
@@ -73,58 +90,72 @@ export default function ProjectDocumentsPage() {
                   Voltar
                 </Button>
               </Link>
-              <div className="relative w-full sm:w-[250px]">
+              <div className="relative w-full sm:w-[260px]">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input type="search" placeholder="Buscar documentos..." className="pl-8" />
+                <Input
+                  type="search"
+                  placeholder="Buscar por disciplina ou tipo..."
+                  className="pl-8"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
               </div>
-              <Link to="/documents/new">
-                <Button className="neon-border">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Novo Documento
-                </Button>
-              </Link>
             </div>
           </PageHeader>
 
-          <Card className="neon-border">
+          <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
             <CardHeader>
-              <CardTitle>Lista de Documentos</CardTitle>
-              <CardDescription>Todos os documentos relacionados ao projeto</CardDescription>
+              <CardTitle>Tipos de documentos previstos</CardTitle>
+              <CardDescription>
+                Tipos de documentos cadastrados por disciplina para este projeto.
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Código</TableHead>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Revisão</TableHead>
-                    <TableHead>Marco</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Última Atualização</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {documents.map((doc) => (
-                    <TableRow key={doc.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-muted-foreground" />
-                          {doc.code}
-                        </div>
-                      </TableCell>
-                      <TableCell>{doc.name}</TableCell>
-                      <TableCell>{doc.type}</TableCell>
-                      <TableCell>{doc.revision}</TableCell>
-                      <TableCell>{doc.milestone}</TableCell>
-                      <TableCell>
-                        <Badge variant={getStatusColor(doc.status)}>{doc.status}</Badge>
-                      </TableCell>
-                      <TableCell>{doc.lastUpdated}</TableCell>
+              {loading && (
+                <p className="text-sm text-muted-foreground">
+                  Carregando tipos de documentos...
+                </p>
+              )}
+
+              {!loading && error && (
+                <p className="text-sm text-destructive">{error}</p>
+              )}
+
+              {!loading && !error && filteredDocTypes.length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  Nenhum tipo de documento previsto encontrado para este projeto.
+                </p>
+              )}
+
+              {!loading && !error && filteredDocTypes.length > 0 && (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Disciplina</TableHead>
+                      <TableHead>Tipo de documento</TableHead>
+                      <TableHead className="text-right">Quantidade</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredDocTypes.map((docType) => (
+                      <TableRow key={docType.id}>
+                        <TableCell className="font-medium">
+                          {docType.disciplineName}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-muted-foreground" />
+                            <span>{docType.docType}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {docType.quantity}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </div>

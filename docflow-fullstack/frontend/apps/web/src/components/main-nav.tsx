@@ -23,7 +23,7 @@ export function MainNav({ className, currentPath }: MainNavProps) {
     { href: "/resources",  label: "Recursos" },     // ✅ aponta para /resources
     { href: "/documents",  label: "Documentos" },
     { href: "/requests",   label: "Solicitações" },
-    { href: "/grds",       label: "GRDs" },
+    { href: "/grds",       label: "Protocolos" },
     { href: "/mensageria", label: "Mensageria" },   // ✅ link ativo para a nova página
   ]
 

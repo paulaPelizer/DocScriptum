@@ -1,5 +1,5 @@
 // src/services/clients.ts
-import { apiGet } from "./api";
+import { apiGet, apiPost, apiPut, apiDelete } from "./api";
 
 /** DTO vindo do backend */
 export type ClientDTO = {
@@ -39,12 +39,39 @@ export type PageResp<T> = {
   last?: boolean;
 };
 
+/** Payload para criação/edição de cliente (sem projectsCount) */
+export type ClientPayload = Partial<Omit<ClientDTO, "projectsCount">>;
+
 /** Busca clientes paginados. Aceita filtro ?q= */
-export function listClients(params?: { page?: number; size?: number; q?: string }) {
+export function listClients(params?: {
+  page?: number;
+  size?: number;
+  q?: string;
+}) {
   const { page = 0, size = 20, q } = params || {};
   const sp = new URLSearchParams({ page: String(page), size: String(size) });
   if (q && q.trim()) sp.set("q", q.trim());
   return apiGet<PageResp<ClientDTO>>(`/clients?${sp.toString()}`);
+}
+
+/** Busca um cliente específico por ID */
+export function getClient(id: number) {
+  return apiGet<ClientDTO>(`/clients/${id}`);
+}
+
+/** Cria um novo cliente (empresa/pessoa) */
+export function createClient(payload: ClientPayload) {
+  return apiPost<ClientDTO>("/clients", payload);
+}
+
+/** Atualiza um cliente existente */
+export function updateClient(id: number, payload: ClientPayload) {
+  return apiPut<ClientDTO>(`/clients/${id}`, payload);
+}
+
+/** Remove um cliente */
+export function deleteClient(id: number) {
+  return apiDelete<void>(`/clients/${id}`);
 }
 
 /** Helper de label bonita pro status */

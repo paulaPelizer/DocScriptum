@@ -10,56 +10,60 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
-import java.util.Optional;
 
 public interface ProjectRepository extends JpaRepository<Project, Long> {
 
+    // ====== usados pelo GET /api/v1/projects (lista simples) ======
     Page<Project> findByClientId(Long clientId, Pageable pageable);
 
     Page<Project> findByCodeContainingIgnoreCaseOrNameContainingIgnoreCase(
-            String code, String name, Pageable pageable
+            String code,
+            String name,
+            Pageable pageable
     );
 
-    // ---------- Listagem p/ tabela ----------
-    @Query(
-        value = "select new com.adi.docflow.web.dto.ProjectListItemDTO(" +
-                " p.id, " +
-                " p.name, " +
-                " coalesce(c.name, '—'), " +
-                " (select count(d) from Document d where d.project.id = p.id), " +
-                " p.status, " +
-                " p.updatedAt " +
-                ") " +
-                "from Project p left join p.client c " +
-                "where (:status is null or p.status = :status) " +
-                "order by p.updatedAt desc",
-        countQuery = "select count(p.id) from Project p where (:status is null or p.status = :status)"
-    )
-    Page<ProjectListItemDTO> findListItemsPage(@Param("status") String status, Pageable pageable);
+    // ====== usados pelo GET /api/v1/projects/table (lista com contagem de documentos) ======
 
-    @Query(
-        "select new com.adi.docflow.web.dto.ProjectListItemDTO(" +
-        " p.id, " +
-        " p.name, " +
-        " coalesce(c.name, '—'), " +
-        " (select count(d) from Document d where d.project.id = p.id), " +
-        " p.status, " +
-        " p.updatedAt " +
-        ") " +
-        "from Project p left join p.client c " +
-        "where (:status is null or p.status = :status) " +
-        "order by p.updatedAt desc"
-    )
-    List<ProjectListItemDTO> findListItems(@Param("status") String status);
-
-    // ---------- Detalhe p/ ProjectService ----------
-    // Importante: sem join de documentos, pois Project não tem coleção 'documents'
     @Query("""
-        select distinct p
+        select new com.adi.docflow.web.dto.ProjectListItemDTO(
+            p.id,
+            p.code,
+            p.name,
+            coalesce(c.name, ''),
+            coalesce(sum(dt.quantity), 0),
+            p.status,
+            p.updatedAt
+        )
         from Project p
-          left join fetch p.client c
-          left join fetch p.milestones m
-        where p.id = :id
-    """)
-    Optional<Project> findWithRelations(@Param("id") Long id);
+        left join p.client c
+        left join ProjectDiscipline pd on pd.project = p
+        left join ProjectDisciplineDocType dt on dt.projectDiscipline = pd
+        where (:status is null or p.status = :status)
+        group by p.id, p.code, p.name, c.name, p.status, p.updatedAt
+        order by p.id desc
+        """)
+    Page<ProjectListItemDTO> findListItemsPage(
+            @Param("status") String status,
+            Pageable pageable
+    );
+
+    @Query("""
+        select new com.adi.docflow.web.dto.ProjectListItemDTO(
+            p.id,
+            p.code,
+            p.name,
+            coalesce(c.name, ''),
+            coalesce(sum(dt.quantity), 0),
+            p.status,
+            p.updatedAt
+        )
+        from Project p
+        left join p.client c
+        left join ProjectDiscipline pd on pd.project = p
+        left join ProjectDisciplineDocType dt on dt.projectDiscipline = pd
+        where (:status is null or p.status = :status)
+        group by p.id, p.code, p.name, c.name, p.status, p.updatedAt
+        order by p.id desc
+        """)
+    List<ProjectListItemDTO> findListItems(@Param("status") String status);
 }

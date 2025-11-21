@@ -17,7 +17,7 @@ logging:
 
 spring:
   datasource:
-    url: jdbc:sqlserver://127.0.0.1:1433;databaseName=docflow;encrypt=true;trustServerCertificate=true;
+    url: jdbc:sqlserver://127.0.0.1:1433;databaseName=master;encrypt=true;trustServerCertificate=true;
     username: docflow_app
     password: Docflow@123
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver

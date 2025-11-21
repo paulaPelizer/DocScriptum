@@ -1,3 +1,4 @@
+// src/pages/requests/new.tsx
 import { useEffect, useMemo, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { ArrowLeft, FileText } from "lucide-react"
@@ -13,19 +14,28 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 
 import { apiGet } from "@/services/api"
-/*import { createRequest } from "@/services/requests"*/
-// antes
-// import { createRequest } from "@/services/requests"
-
-// depois
 import * as RequestsApi from "@/services/requests"
 
 /* ========================= Tipos ========================= */
 type Project = { id: number; code?: string; name: string }
 type Organization = { id: number; name: string; type?: "CLIENT" | "SUPPLIER" | "INTERNAL" }
-type ProjectDocument = { id: number | string; code?: string; title?: string; name?: string; revision?: string | number; projectId?: number }
+type ProjectDocument = {
+  id: number | string
+  code?: string
+  title?: string
+  name?: string
+  revision?: string | number
+  projectId?: number
+}
 type User = { id: number; name?: string; email?: string; username?: string }
-type DocPick = { id: string | number; code: string; name: string; revision?: string | number; projectId: number; checked: boolean }
+type DocPick = {
+  id: string | number
+  code: string
+  name: string
+  revision?: string | number
+  projectId: number
+  checked: boolean
+}
 
 type ProjectDetail = Record<string, any> & {
   id?: number
@@ -49,21 +59,88 @@ type ProjectDetail = Record<string, any> & {
 
 /* --------------------------- Helpers --------------------------- */
 async function tryGet<T>(url: string): Promise<T | null> {
-  try { return await apiGet<T>(url as any) } catch { return null }
+  try {
+    return await apiGet<T>(url as any)
+  } catch {
+    return null
+  }
 }
+
 function asArray<T>(maybe: any): T[] {
   if (Array.isArray(maybe)) return maybe as T[]
   if (maybe && Array.isArray(maybe.content)) return maybe.content as T[]
   if (maybe && Array.isArray(maybe.items)) return maybe.items as T[]
   return []
 }
+
 function dateToISO(d?: string | null) {
   if (!d) return undefined
   const [y, m, da] = d.split("-").map(Number)
   if (!y || !m || !da) return undefined
   return new Date(y, m - 1, da, 0, 0, 0).toISOString()
 }
+
 const toNumOrNull = (v: string) => (v && v !== "0" ? Number(v) : null)
+
+/** Lê o token JWT do localStorage, tentando detectar automaticamente */
+function getAuthToken(): string | null {
+  // 1) tenta chaves mais comuns
+  const knownKeys = [
+    "docflow_token",
+    "docflow-auth-token",
+    "token",
+    "authToken",
+    "access_token",
+    "jwt",
+  ]
+
+  for (const key of knownKeys) {
+    const value = localStorage.getItem(key)
+    if (value && value.includes(".") && value.split(".").length === 3) {
+      console.log("[NewRequestPage] JWT encontrado em key conhecida:", key)
+      return value
+    }
+  }
+
+  // 2) se não achou, faz um scan de todas as chaves procurando algo com cara de JWT
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i)
+    if (!key) continue
+    const value = localStorage.getItem(key)
+    if (value && value.includes(".") && value.split(".").length === 3) {
+      console.log("[NewRequestPage] JWT encontrado via scan em key:", key)
+      return value
+    }
+  }
+
+  console.log("[NewRequestPage] Nenhum JWT encontrado no localStorage")
+  return null
+}
+
+/** Puxa o username/email de dentro do JWT */
+function getAuthUsernameFromToken(): string | null {
+  const token = getAuthToken()
+  if (!token) return null
+
+  const parts = token.split(".")
+  if (parts.length < 2) return null
+
+  try {
+    const payloadJson = JSON.parse(
+      atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"))
+    )
+    const username =
+      payloadJson.username || payloadJson.sub || payloadJson.email || null
+
+    console.log("[NewRequestPage] Payload JWT:", payloadJson)
+    console.log("[NewRequestPage] Username/email detectado do JWT:", username)
+
+    return username
+  } catch (e) {
+    console.error("[NewRequestPage] Erro ao decodificar payload do JWT:", e)
+    return null
+  }
+}
 
 /* =============================== Página - Nova Solicitação ============================== */
 export default function NewRequestPage() {
@@ -105,13 +182,21 @@ export default function NewRequestPage() {
   const [requestUserId, setRequestUserId] = useState<string>("")
   const [requesterContact, setRequesterContact] = useState<string>("")
   const [description, setDescription] = useState<string>("")
-  const [requestDate, setRequestDate] = useState<string>(new Date().toISOString().split("T")[0])
+  const [requestDate, setRequestDate] = useState<string>(
+    new Date().toISOString().split("T")[0]
+  )
   const [deadline, setDeadline] = useState<string>("")
   const [justification, setJustification] = useState<string>("")
   const [specialInstructions, setSpecialInstructions] = useState<string>("")
 
-  const clients = useMemo(() => orgs.filter(o => o.type === "CLIENT"), [orgs])
-  const suppliers = useMemo(() => orgs.filter(o => o.type === "SUPPLIER"), [orgs])
+  const clients = useMemo(
+    () => orgs.filter((o) => o.type === "CLIENT"),
+    [orgs]
+  )
+  const suppliers = useMemo(
+    () => orgs.filter((o) => o.type === "SUPPLIER"),
+    [orgs]
+  )
 
   /* ======================= Boot ======================= */
   useEffect(() => {
@@ -133,24 +218,55 @@ export default function NewRequestPage() {
             tryGet<any>("/api/v1/clients"),
             tryGet<any>("/api/v1/suppliers"),
           ])
-          const cList = asArray<Organization>(clientsResp).map(c => ({ ...c, type: "CLIENT" as const }))
-          const sList = asArray<Organization>(suppliersResp).map(s => ({ ...s, type: "SUPPLIER" as const }))
+          const cList = asArray<Organization>(clientsResp).map((c) => ({
+            ...c,
+            type: "CLIENT" as const,
+          }))
+          const sList = asArray<Organization>(suppliersResp).map((s) => ({
+            ...s,
+            type: "SUPPLIER" as const,
+          }))
           orgsData = [...cList, ...sList]
         }
 
         // USUÁRIOS
         let usersList = asArray<User>(await tryGet<any>("/api/v1/users"))
-        if (!usersList.length) usersList = asArray<User>(await tryGet<any>("/api/v1/accounts"))
-        if (!usersList.length) usersList = [{ id: 1, name: "Admin", email: "admin@docflow" }]
+        if (!usersList.length)
+          usersList = asArray<User>(await tryGet<any>("/api/v1/accounts"))
+        if (!usersList.length)
+          usersList = [{ id: 1, name: "Admin", email: "admin@docflow" }]
 
         if (!abort) {
           setProjects(projs ?? [])
           setOrgs(orgsData ?? [])
           setUsers(usersList ?? [])
-          const u0 = usersList?.[0]
-          if (u0) {
-            setRequestUserId(String(u0.id))
-            setRequesterContact(u0.email || u0.username || "")
+
+          const currentUsername = getAuthUsernameFromToken()
+          console.log("[NewRequestPage] currentUsername do JWT:", currentUsername)
+          console.log("[NewRequestPage] usersList:", usersList)
+
+          let initialUser: User | undefined
+
+          if (currentUsername) {
+            const lowered = currentUsername.toLowerCase()
+            initialUser =
+              usersList.find(
+                (u) =>
+                  u.username?.toLowerCase() === lowered ||
+                  u.email?.toLowerCase() === lowered ||
+                  u.name?.toLowerCase() === lowered
+              ) ?? usersList[0]
+          } else {
+            initialUser = usersList[0]
+          }
+
+          console.log("[NewRequestPage] initialUser escolhido:", initialUser)
+
+          if (initialUser) {
+            setRequestUserId(String(initialUser.id))
+            setRequesterContact(
+              initialUser.email || initialUser.username || ""
+            )
           }
         }
       } catch (err: any) {
@@ -163,19 +279,28 @@ export default function NewRequestPage() {
       }
     })()
 
-    return () => { abort = true }
+    return () => {
+      abort = true
+    }
   }, [])
 
   /* ======================= Carregar detail + docs ======================= */
   useEffect(() => {
-    if (!projectId) { setDocs([]); setProjectDetail(null); setProjectSnapshot(null); return }
+    if (!projectId) {
+      setDocs([])
+      setProjectDetail(null)
+      setProjectSnapshot(null)
+      return
+    }
     let abort = false
     setIsDocsLoading(true)
     setErrorMsg(null)
 
     ;(async () => {
       try {
-        const detail = await tryGet<ProjectDetail>(`/api/v1/projects/${projectId}/detail`)
+        const detail = await tryGet<ProjectDetail>(
+          `/api/v1/projects/${projectId}/detail`
+        )
         if (!detail) throw new Error("Sem detail")
 
         if (!abort) setProjectDetail(detail)
@@ -239,7 +364,6 @@ export default function NewRequestPage() {
             else if (client) setRequesterOrgId(String(client))
           }
           if (!targetOrgId) {
-            // heurística simples
             if (client && !supplier) setTargetOrgId(String(client))
             if (!client && supplier) setTargetOrgId(String(supplier))
           }
@@ -247,7 +371,9 @@ export default function NewRequestPage() {
       } catch (err) {
         if (!abort) {
           console.error(err)
-          setErrorMsg("Falha ao carregar detalhes/documentos do projeto selecionado.")
+          setErrorMsg(
+            "Falha ao carregar detalhes/documentos do projeto selecionado."
+          )
           setDocs([])
           setProjectDetail(null)
           setProjectSnapshot(null)
@@ -257,35 +383,51 @@ export default function NewRequestPage() {
       }
     })()
 
-    return () => { abort = true }
-  }, [projectId]) // eslint-disable-line react-hooks/exhaustive-deps
+    return () => {
+      abort = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId])
 
   /* Auto-preencher contato ao trocar usuário */
   useEffect(() => {
     if (!requestUserId) return
-    const u = users.find(x => String(x.id) === String(requestUserId))
+    const u = users.find((x) => String(x.id) === String(requestUserId))
     setRequesterContact(u?.email || u?.username || "")
   }, [requestUserId, users])
 
   /* seleção de docs */
   const toggleDocument = (id: number | string) => {
-    setDocs(prev => prev.map(d => (d.id === id ? { ...d, checked: !d.checked } : d)))
+    setDocs((prev) =>
+      prev.map((d) => (d.id === id ? { ...d, checked: !d.checked } : d))
+    )
   }
-  const selectedDocs = useMemo(() => docs.filter(d => d.checked), [docs])
+  const selectedDocs = useMemo(
+    () => docs.filter((d) => d.checked),
+    [docs]
+  )
 
   /* ======================= Submit ======================= */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!projectId || !requestType || !purpose.trim() || !requesterOrgId || !targetOrgId || !requestUserId) {
-      setErrorMsg("Preencha Projeto, Tipo, Propósito, Solicitante, Destinatário e Usuário solicitante.")
+    if (
+      !projectId ||
+      !requestType ||
+      !purpose.trim() ||
+      !requesterOrgId ||
+      !targetOrgId ||
+      !requestUserId
+    ) {
+      setErrorMsg(
+        "Preencha Projeto, Tipo, Propósito, Solicitante, Destinatário e Usuário solicitante."
+      )
       return
     }
 
     setErrorMsg(null)
     setIsSubmitting(true)
 
-    // monta um snapshot leve para persistir
     const metadata = {
       project: projectSnapshot,
       orgsResolved: {
@@ -294,7 +436,12 @@ export default function NewRequestPage() {
       },
       requestType,
       priority,
-      documents: selectedDocs.map(d => ({ id: Number(d.id), code: d.code, name: d.name, revision: d.revision })),
+      documents: selectedDocs.map((d) => ({
+        id: Number(d.id),
+        code: d.code,
+        name: d.name,
+        revision: d.revision,
+      })),
     }
 
     const payload: any = {
@@ -309,8 +456,9 @@ export default function NewRequestPage() {
       desiredDeadline: deadline ? dateToISO(deadline) : null,
       justification: justification?.trim() || null,
       specialInstructions: specialInstructions?.trim() || null,
-      documentIds: selectedDocs.map(d => Number(d.id)).filter(n => Number.isFinite(n)),
-      // >>> campo seguro para carregar tudo que veio do GET e precisa “ficar”
+      documentIds: selectedDocs
+        .map((d) => Number(d.id))
+        .filter((n) => Number.isFinite(n)),
       metadataJson: JSON.stringify(metadata),
     }
 
@@ -329,15 +477,14 @@ export default function NewRequestPage() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center justify-between px-4 md:px-6">
-          <AppHeader />
-        </div>
-      </header>
+      <AppHeader />
 
       <main className="flex-1 p-4 md:p-6">
         <div className="container mx-auto max-w-4xl">
-          <PageHeader title="Nova Solicitação" description="Crie uma nova solicitação de tramitação">
+          <PageHeader
+            title="Nova Solicitação"
+            description="Crie uma nova solicitação de tramitação"
+          >
             <Link to="/requests">
               <Button variant="outline">
                 <ArrowLeft className="mr-2 h-4 w-4" aria-hidden />
@@ -348,7 +495,7 @@ export default function NewRequestPage() {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* INFO PRINCIPAIS */}
-            <Card className="neon-border">
+            <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
               <CardHeader>
                 <CardTitle>Informações da Solicitação</CardTitle>
                 <CardDescription>Dados principais da solicitação</CardDescription>
@@ -357,12 +504,18 @@ export default function NewRequestPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="request-number">Número da Solicitação</Label>
-                    <Input id="request-number" placeholder="Será gerado automaticamente" disabled />
+                    <Input
+                      id="request-number"
+                      placeholder="Será gerado automaticamente"
+                      disabled
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="priority">Prioridade</Label>
                     <Select value={priority} onValueChange={setPriority}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="baixa">Baixa</SelectItem>
                         <SelectItem value="normal">Normal</SelectItem>
@@ -375,12 +528,20 @@ export default function NewRequestPage() {
 
                 <div className="space-y-2">
                   <Label>Projeto *</Label>
-                  <Select value={projectId} onValueChange={setProjectId} disabled={isBootLoading}>
+                  <Select
+                    value={projectId}
+                    onValueChange={setProjectId}
+                    disabled={isBootLoading}
+                  >
                     <SelectTrigger>
-                      <SelectValue placeholder={isBootLoading ? "Carregando..." : "Selecione o projeto"} />
+                      <SelectValue
+                        placeholder={
+                          isBootLoading ? "Carregando..." : "Selecione o projeto"
+                        }
+                      />
                     </SelectTrigger>
                     <SelectContent>
-                      {projects.map(p => (
+                      {projects.map((p) => (
                         <SelectItem key={p.id} value={String(p.id)}>
                           {p.code ? `${p.code} — ${p.name}` : p.name}
                         </SelectItem>
@@ -396,25 +557,42 @@ export default function NewRequestPage() {
                   </div>
                   <div className="space-y-2">
                     <Label>Início</Label>
-                    <Input value={projectSnapshot?.startDate ?? "-" } readOnly />
+                    <Input value={projectSnapshot?.startDate ?? "-"} readOnly />
                   </div>
                   <div className="space-y-2">
                     <Label>Previsão/Fim</Label>
-                    <Input value={projectSnapshot?.plannedEndDate ?? "-"} readOnly />
+                    <Input
+                      value={projectSnapshot?.plannedEndDate ?? "-"}
+                      readOnly
+                    />
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <Label>Tipo de Solicitação *</Label>
                   <Select value={requestType} onValueChange={setRequestType}>
-                    <SelectTrigger><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o tipo" />
+                    </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="SEND_TO_CLIENT">Envio para Cliente</SelectItem>
-                      <SelectItem value="SEND_TO_SUPPLIER">Envio para Fornecedor</SelectItem>
-                      <SelectItem value="RECEIVE_FROM_CLIENT">Retorno de Cliente</SelectItem>
-                      <SelectItem value="RECEIVE_FROM_SUPPLIER">Retorno de Fornecedor</SelectItem>
-                      <SelectItem value="INTERNAL_APPROVAL">Aprovação Interna</SelectItem>
-                      <SelectItem value="TECH_REVIEW">Revisão Técnica</SelectItem>
+                      <SelectItem value="SEND_TO_CLIENT">
+                        Envio para Cliente
+                      </SelectItem>
+                      <SelectItem value="SEND_TO_SUPPLIER">
+                        Envio para Fornecedor
+                      </SelectItem>
+                      <SelectItem value="RECEIVE_FROM_CLIENT">
+                        Retorno de Cliente
+                      </SelectItem>
+                      <SelectItem value="RECEIVE_FROM_SUPPLIER">
+                        Retorno de Fornecedor
+                      </SelectItem>
+                      <SelectItem value="INTERNAL_APPROVAL">
+                        Aprovação Interna
+                      </SelectItem>
+                      <SelectItem value="TECH_REVIEW">
+                        Revisão Técnica
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -441,33 +619,75 @@ export default function NewRequestPage() {
             </Card>
 
             {/* ORIGEM/DESTINO */}
-            <Card className="neon-border">
+            <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
               <CardHeader>
                 <CardTitle>Origem e Destino</CardTitle>
-                <CardDescription>Defina quem está solicitando e para quem</CardDescription>
+                <CardDescription>
+                  Defina quem está solicitando e para quem
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Solicitante (Organização) *</Label>
-                    <Select value={requesterOrgId} onValueChange={setRequesterOrgId} disabled={isBootLoading}>
-                      <SelectTrigger><SelectValue placeholder={isBootLoading ? "Carregando..." : "Quem está solicitando"} /></SelectTrigger>
+                    <Select
+                      value={requesterOrgId}
+                      onValueChange={setRequesterOrgId}
+                      disabled={isBootLoading}
+                    >
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder={
+                            isBootLoading
+                              ? "Carregando..."
+                              : "Quem está solicitando"
+                          }
+                        />
+                      </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="0">Interno</SelectItem>
-                        {clients.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name} (Cliente)</SelectItem>)}
-                        {suppliers.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name} (Fornecedor)</SelectItem>)}
+                        {clients.map((c) => (
+                          <SelectItem key={c.id} value={String(c.id)}>
+                            {c.name} (Cliente)
+                          </SelectItem>
+                        ))}
+                        {suppliers.map((s) => (
+                          <SelectItem key={s.id} value={String(s.id)}>
+                            {s.name} (Fornecedor)
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-2">
                     <Label>Destinatário (Organização) *</Label>
-                    <Select value={targetOrgId} onValueChange={setTargetOrgId} disabled={isBootLoading}>
-                      <SelectTrigger><SelectValue placeholder={isBootLoading ? "Carregando..." : "Para quem é a solicitação"} /></SelectTrigger>
+                    <Select
+                      value={targetOrgId}
+                      onValueChange={setTargetOrgId}
+                      disabled={isBootLoading}
+                    >
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder={
+                            isBootLoading
+                              ? "Carregando..."
+                              : "Para quem é a solicitação"
+                          }
+                        />
+                      </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="0">Interno</SelectItem>
-                        {clients.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name} (Cliente)</SelectItem>)}
-                        {suppliers.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name} (Fornecedor)</SelectItem>)}
+                        {clients.map((c) => (
+                          <SelectItem key={c.id} value={String(c.id)}>
+                            {c.name} (Cliente)
+                          </SelectItem>
+                        ))}
+                        {suppliers.map((s) => (
+                          <SelectItem key={s.id} value={String(s.id)}>
+                            {s.name} (Fornecedor)
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -476,12 +696,25 @@ export default function NewRequestPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Usuário solicitante *</Label>
-                    <Select value={requestUserId} onValueChange={setRequestUserId} disabled={isBootLoading}>
-                      <SelectTrigger><SelectValue placeholder={isBootLoading ? "Carregando..." : "Selecione o usuário"} /></SelectTrigger>
+                    <Select
+                      value={requestUserId}
+                      onValueChange={setRequestUserId}
+                      disabled={isBootLoading}
+                    >
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder={
+                            isBootLoading
+                              ? "Carregando..."
+                              : "Selecione o usuário"
+                          }
+                        />
+                      </SelectTrigger>
                       <SelectContent>
-                        {users.map(u => (
+                        {users.map((u) => (
                           <SelectItem key={u.id} value={String(u.id)}>
-                            {(u.name || u.username || `ID ${u.id}`)} {u.email ? `— ${u.email}` : ""}
+                            {u.name || u.username || `ID ${u.id}`}{" "}
+                            {u.email ? `— ${u.email}` : ""}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -489,37 +722,60 @@ export default function NewRequestPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="requester-contact">Contato do Solicitante (auto)</Label>
-                    <Input id="requester-contact" placeholder="email do usuário" value={requesterContact} readOnly />
+                    <Label htmlFor="requester-contact">
+                      Contato do Solicitante (auto)
+                    </Label>
+                    <Input
+                      id="requester-contact"
+                      placeholder="email do usuário"
+                      value={requesterContact}
+                      readOnly
+                    />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             {/* DOCUMENTOS */}
-            <Card className="neon-border">
+            <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
               <CardHeader>
                 <CardTitle>Documentos Relacionados</CardTitle>
-                <CardDescription>Selecione os documentos relacionados a esta solicitação</CardDescription>
+                <CardDescription>
+                  Selecione os documentos relacionados a esta solicitação
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {(!projectId || isDocsLoading) && (
                   <div className="text-sm text-muted-foreground">
-                    {isDocsLoading ? "Carregando documentos..." : "Selecione um projeto para listar os documentos."}
+                    {isDocsLoading
+                      ? "Carregando documentos..."
+                      : "Selecione um projeto para listar os documentos."}
                   </div>
                 )}
                 {projectId && !isDocsLoading && docs.length === 0 && (
-                  <div className="text-sm text-muted-foreground">Nenhum documento encontrado para o projeto selecionado.</div>
+                  <div className="text-sm text-muted-foreground">
+                    Nenhum documento encontrado para o projeto selecionado.
+                  </div>
                 )}
                 {docs.length > 0 && (
                   <>
                     <div className="space-y-4">
-                      {docs.map(doc => (
-                        <div key={String(doc.id)} className="flex items-center justify-between border rounded-lg p-4">
+                      {docs.map((doc) => (
+                        <div
+                          key={String(doc.id)}
+                          className="flex items-center justify-between border rounded-lg p-4"
+                        >
                           <div className="flex items-center space-x-3">
-                            <Checkbox id={`doc-${String(doc.id)}`} checked={doc.checked} onCheckedChange={() => toggleDocument(doc.id)} />
+                            <Checkbox
+                              id={`doc-${String(doc.id)}`}
+                              checked={doc.checked}
+                              onCheckedChange={() => toggleDocument(doc.id)}
+                            />
                             <div>
-                              <Label htmlFor={`doc-${String(doc.id)}`} className="font-medium">
+                              <Label
+                                htmlFor={`doc-${String(doc.id)}`}
+                                className="font-medium"
+                              >
                                 {doc.code} — {doc.name}
                               </Label>
                             </div>
@@ -530,46 +786,86 @@ export default function NewRequestPage() {
                         </div>
                       ))}
                     </div>
-                    <div className="text-sm text-muted-foreground">{docs.filter(d => d.checked).length} documento(s) selecionado(s)</div>
+                    <div className="text-sm text-muted-foreground">
+                      {docs.filter((d) => d.checked).length} documento(s)
+                      selecionado(s)
+                    </div>
                   </>
                 )}
               </CardContent>
             </Card>
 
             {/* PRAZOS E DETALHES */}
-            <Card className="neon-border">
+            <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
               <CardHeader>
                 <CardTitle>Prazos e Detalhes</CardTitle>
-                <CardDescription>Defina prazos e informações adicionais</CardDescription>
+                <CardDescription>
+                  Defina prazos e informações adicionais
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="request-date">Data da Solicitação</Label>
-                    <Input id="request-date" type="date" value={requestDate} onChange={(e) => setRequestDate(e.target.value)} />
+                    <Input
+                      id="request-date"
+                      type="date"
+                      value={requestDate}
+                      onChange={(e) => setRequestDate(e.target.value)}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="deadline">Prazo Desejado</Label>
-                    <Input id="deadline" type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
+                    <Input
+                      id="deadline"
+                      type="date"
+                      value={deadline}
+                      onChange={(e) => setDeadline(e.target.value)}
+                    />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="justification">Justificativa</Label>
-                  <Textarea id="justification" placeholder="Justifique a necessidade desta solicitação..." className="min-h-[80px]" value={justification} onChange={(e) => setJustification(e.target.value)} />
+                  <Textarea
+                    id="justification"
+                    placeholder="Justifique a necessidade desta solicitação..."
+                    className="min-h-[80px]"
+                    value={justification}
+                    onChange={(e) => setJustification(e.target.value)}
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="special-instructions">Instruções Especiais</Label>
-                  <Textarea id="special-instructions" placeholder="Instruções específicas, cuidados especiais, etc..." className="min-h-[80px]" value={specialInstructions} onChange={(e) => setSpecialInstructions(e.target.value)} />
+                  <Label htmlFor="special-instructions">
+                    Instruções Especiais
+                  </Label>
+                  <Textarea
+                    id="special-instructions"
+                    placeholder="Instruções específicas, cuidados especiais, etc..."
+                    className="min-h-[80px]"
+                    value={specialInstructions}
+                    onChange={(e) => setSpecialInstructions(e.target.value)}
+                  />
                 </div>
               </CardContent>
             </Card>
 
-            {errorMsg && <div className="text-sm text-red-500">{errorMsg}</div>}
+            {errorMsg && (
+              <div className="text-sm text-red-500">{errorMsg}</div>
+            )}
 
             <div className="flex justify-end gap-4">
-              <Link to="/requests"><Button variant="outline">Cancelar</Button></Link>
-              <Button type="submit" disabled={isSubmitting} className="neon-border">
-                {isSubmitting ? "Criando..." : (<><FileText className="mr-2 h-4 w-4" />Criar Solicitação</>)}
+              <Link to="/requests">
+                <Button variant="outline">Cancelar</Button>
+              </Link>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  "Criando..."
+                ) : (
+                  <>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Criar Solicitação
+                  </>
+                )}
               </Button>
             </div>
           </form>

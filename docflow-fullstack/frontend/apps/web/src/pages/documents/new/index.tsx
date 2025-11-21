@@ -522,7 +522,7 @@ export default function NewDocumentPage() {
           </PageHeader>
 
           {/* 1) Projeto e Classificação */}
-          <Card className="neon-border mb-6">
+          <Card className="neon-border mb-6 border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
             <CardHeader>
               <CardTitle>Projeto e Classificação</CardTitle>
               <CardDescription>Selecione o projeto, a disciplina e o tipo</CardDescription>
@@ -637,7 +637,7 @@ export default function NewDocumentPage() {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* 2) Responsabilidade */}
-            <Card className="neon-border">
+            <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
               <CardHeader>
                 <CardTitle>Responsabilidade</CardTitle>
                 <CardDescription>Defina quem é responsável pelo documento</CardDescription>
@@ -689,7 +689,7 @@ export default function NewDocumentPage() {
             </Card>
 
             {/* 3) Status e Localização */}
-            <Card className="neon-border">
+            <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
               <CardHeader>
                 <CardTitle>Status e Localização</CardTitle>
                 <CardDescription>Defina o status inicial e localização do documento</CardDescription>
@@ -734,7 +734,7 @@ export default function NewDocumentPage() {
             </Card>
 
             {/* 4) Upload de Arquivo */}
-            <Card className="neon-border">
+            <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
               <CardHeader>
                 <CardTitle>Upload de Arquivo</CardTitle>
                 <CardDescription>Faça upload do arquivo do documento</CardDescription>
@@ -777,7 +777,7 @@ export default function NewDocumentPage() {
             </Card>
 
             {/* 5) Informações do Documento */}
-            <Card className="neon-border">
+            <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
               <CardHeader>
                 <CardTitle>Informações do Documento</CardTitle>
                 <CardDescription>Dados principais do documento</CardDescription>

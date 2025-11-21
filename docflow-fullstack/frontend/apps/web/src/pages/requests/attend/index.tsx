@@ -35,6 +35,45 @@ type ProjectData = {
   disciplinas: { id: number; name: string; destinatarios: ProjectDestinatarios }[]
 }
 
+type DecodedToken = {
+  roles?: string // ex.: "ROLE_DBA,ROLE_ADMIN,ROLE_RESOURCE"
+  [key: string]: any
+}
+
+// 👉 Apenas DBA e ADMIN podem atender solicitações
+const ATTEND_ALLOWED_ROLES = ["ROLE_DBA", "ROLE_ADMIN"]
+
+function decodeJwt(token: string): DecodedToken | null {
+  try {
+    const payload = token.split(".")[1]
+    if (!payload) return null
+
+    const base64 = payload.replace(/-/g, "+").replace(/_/g, "/")
+    const json = atob(base64)
+    return JSON.parse(json) as DecodedToken
+  } catch (err) {
+    console.error("Erro ao decodificar JWT:", err)
+    return null
+  }
+}
+
+function hasAttendPermission(): boolean {
+  const token = localStorage.getItem("authToken")
+  if (!token) return false
+
+  const decoded = decodeJwt(token)
+  if (!decoded || !decoded.roles) return false
+
+  const roles = decoded.roles
+    .split(/[,\s;]+/)
+    .map((r: string) => r.trim())
+    .filter(Boolean)
+
+  console.log("JWT roles:", decoded.roles, "rolesArray:", roles)
+
+  return roles.some((r) => ATTEND_ALLOWED_ROLES.includes(r))
+}
+
 export default function AttendRequestsPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -44,6 +83,8 @@ export default function AttendRequestsPage() {
   const [selectedRequests, setSelectedRequests] = useState<SelectedRequest[]>([])
   const [selectedDocuments, setSelectedDocuments] = useState<number[]>([])
   const [projectData, setProjectData] = useState<ProjectData | null>(null)
+
+  const canAttend = hasAttendPermission()
 
   useEffect(() => {
     const ids = searchParams.get("ids")?.split(",").map(Number) || []
@@ -210,7 +251,9 @@ export default function AttendRequestsPage() {
         <div className="container mx-auto max-w-6xl">
           <PageHeader
             title="Atender Solicitações"
-            description={`Processar ${selectedRequests.length} solicitação${selectedRequests.length === 1 ? "" : "ões"} selecionada${selectedRequests.length === 1 ? "" : "s"}`}
+            description={`Processar ${selectedRequests.length} solicitação${
+              selectedRequests.length === 1 ? "" : "ões"
+            } selecionada${selectedRequests.length === 1 ? "" : "s"}`}
           >
             <Link to="/requests">
               <Button variant="outline">
@@ -327,7 +370,9 @@ export default function AttendRequestsPage() {
                               <Label className="text-sm font-medium capitalize">{groupType}</Label>
                               <div className="space-y-2 max-h-32 overflow-y-auto border rounded p-2">
                                 {users
-                                  .filter((user) => destinatarios[groupType as keyof ProjectDestinatarios]?.includes(user.id))
+                                  .filter((user) =>
+                                    destinatarios[groupType as keyof ProjectDestinatarios]?.includes(user.id)
+                                  )
                                   .map((user) => (
                                     <div key={user.id} className="flex items-center space-x-2">
                                       <Checkbox id={`${disciplina}-${groupType}-${user.id}`} defaultChecked />
@@ -356,54 +401,58 @@ export default function AttendRequestsPage() {
               </CardContent>
             </Card>
 
-            {/* Atendimento em Lote */}
-            <Card className="neon-border">
-              <CardHeader>
-                <CardTitle>Atendimento em Lote</CardTitle>
-                <CardDescription>Analise e tome uma decisão para todas as solicitações selecionadas</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="batch-comments">Comentários (aplicado a todas as solicitações)</Label>
-                  <Textarea
-                    id="batch-comments"
-                    placeholder="Adicione comentários sobre a análise das solicitações..."
-                    value={comments}
-                    onChange={(e) => setComments(e.target.value)}
-                    className="min-h-[100px]"
-                  />
-                </div>
+            {/* Atendimento em Lote – só DBA e ADMIN enxergam */}
+            {canAttend && (
+              <Card className="neon-border">
+                <CardHeader>
+                  <CardTitle>Atendimento em Lote</CardTitle>
+                  <CardDescription>Analise e tome uma decisão para todas as solicitações selecionadas</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="batch-comments">Comentários (aplicado a todas as solicitações)</Label>
+                    <Textarea
+                      id="batch-comments"
+                      placeholder="Adicione comentários sobre a análise das solicitações..."
+                      value={comments}
+                      onChange={(e) => setComments(e.target.value)}
+                      className="min-h-[100px]"
+                    />
+                  </div>
 
-                <div className="bg-muted/50 p-4 rounded-lg">
-                  <h4 className="font-medium mb-2">Resumo da Ação:</h4>
-                  <ul className="text-sm text-muted-foreground space-y-1">
-                    <li>
-                      • <strong>Solicitações:</strong> {selectedRequests.length}
-                    </li>
-                    <li>
-                      • <strong>Documentos selecionados:</strong> {selectedDocuments.length}
-                    </li>
-                    <li>
-                      • <strong>Disciplinas envolvidas:</strong> {Object.keys(getSelectedDocumentsByDisciplina()).join(", ")}
-                    </li>
-                  </ul>
-                </div>
+                  <div className="bg-muted/50 p-4 rounded-lg">
+                    <h4 className="font-medium mb-2">Resumo da Ação:</h4>
+                    <ul className="text-sm text-muted-foreground space-y-1">
+                      <li>
+                        • <strong>Solicitações:</strong> {selectedRequests.length}
+                      </li>
+                      <li>
+                        • <strong>Documentos selecionados:</strong> {selectedDocuments.length}
+                      </li>
+                      <li>
+                        • <strong>Disciplinas envolvidas:</strong>{" "}
+                        {Object.keys(getSelectedDocumentsByDisciplina()).join(", ")}
+                      </li>
+                    </ul>
+                  </div>
 
-                <div className="flex gap-4 justify-end pt-4">
-                  <Button variant="destructive" onClick={handleRejectAll} disabled={isProcessing}>
-                    <XCircle className="mr-2 h-4 w-4" />
-                    {isProcessing ? "Processando..." : "Rejeitar Todas"}
-                  </Button>
-                  <Button onClick={handleApproveAll} disabled={isProcessing} className="neon-border">
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                    {isProcessing ? "Processando..." : "Aprovar e Gerar GRDs"}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                  <div className="flex gap-4 justify-end pt-4">
+                    <Button variant="destructive" onClick={handleRejectAll} disabled={isProcessing}>
+                      <XCircle className="mr-2 h-4 w-4" />
+                      {isProcessing ? "Processando..." : "Rejeitar Todas"}
+                    </Button>
+                    <Button onClick={handleApproveAll} disabled={isProcessing} className="neon-border">
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      {isProcessing ? "Processando..." : "Aprovar e Gerar GRDs"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </main>
     </div>
   )
 }
+

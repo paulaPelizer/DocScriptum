@@ -198,7 +198,12 @@ export default function ClientsPage() {
                     <Button variant="ghost" size="sm" onClick={clearAll}>
                       Limpar
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={selectAll} disabled={selectedFields.length === allFields.length}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={selectAll}
+                      disabled={selectedFields.length === allFields.length}
+                    >
                       Selecionar tudo
                     </Button>
                   </div>
@@ -228,7 +233,7 @@ export default function ClientsPage() {
 
             {/* CLIENTES (dados reais) */}
             <TabsContent value="clients">
-              <Card className="neon-border">
+              <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
                 <CardHeader>
                   <CardTitle>Lista de Clientes</CardTitle>
                   <CardDescription>Todos os clientes cadastrados no sistema</CardDescription>
@@ -321,7 +326,6 @@ export default function ClientsPage() {
                                         Editar
                                       </Link>
                                     </DropdownMenuItem>
-                                  
                                   </DropdownMenuContent>
                                 </DropdownMenu>
                               </TableCell>
@@ -361,7 +365,7 @@ export default function ClientsPage() {
 
             {/* FORNECEDORES (placeholder) */}
             <TabsContent value="suppliers">
-              <Card className="neon-border">
+              <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
                 <CardHeader>
                   <CardTitle>Lista de Fornecedores</CardTitle>
                   <CardDescription>Em breve com dados reais</CardDescription>

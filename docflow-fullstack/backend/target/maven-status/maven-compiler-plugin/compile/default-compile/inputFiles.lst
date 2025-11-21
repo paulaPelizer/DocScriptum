@@ -18,6 +18,7 @@ C:\Users\Paula Pelizer\Downloads\projetoFinalMaisPraTi_Paula-main\docflow-fullst
 C:\Users\Paula Pelizer\Downloads\projetoFinalMaisPraTi_Paula-main\docflow-fullstack\backend\src\main\java\com\adi\docflow\model\Project.java
 C:\Users\Paula Pelizer\Downloads\projetoFinalMaisPraTi_Paula-main\docflow-fullstack\backend\src\main\java\com\adi\docflow\model\DocTypeView.java
 C:\Users\Paula Pelizer\Downloads\projetoFinalMaisPraTi_Paula-main\docflow-fullstack\backend\src\main\java\com\adi\docflow\web\RequestController.java
+C:\Users\Paula Pelizer\Downloads\projetoFinalMaisPraTi_Paula-main\docflow-fullstack\backend\src\main\java\com\adi\docflow\web\dto\ProjectDocTypeDTO.java
 C:\Users\Paula Pelizer\Downloads\projetoFinalMaisPraTi_Paula-main\docflow-fullstack\backend\src\main\java\com\adi\docflow\service\RequestService.java
 C:\Users\Paula Pelizer\Downloads\projetoFinalMaisPraTi_Paula-main\docflow-fullstack\backend\src\main\java\com\adi\docflow\web\dto\MessageDTO.java
 C:\Users\Paula Pelizer\Downloads\projetoFinalMaisPraTi_Paula-main\docflow-fullstack\backend\src\main\java\com\adi\docflow\web\dto\ProjectSummaryDTO.java
@@ -94,6 +95,7 @@ C:\Users\Paula Pelizer\Downloads\projetoFinalMaisPraTi_Paula-main\docflow-fullst
 C:\Users\Paula Pelizer\Downloads\projetoFinalMaisPraTi_Paula-main\docflow-fullstack\backend\src\main\java\com\adi\docflow\model\ProjectDiscipline.java
 C:\Users\Paula Pelizer\Downloads\projetoFinalMaisPraTi_Paula-main\docflow-fullstack\backend\src\main\java\com\adi\docflow\web\dto\ClientDTO.java
 C:\Users\Paula Pelizer\Downloads\projetoFinalMaisPraTi_Paula-main\docflow-fullstack\backend\src\main\java\com\adi\docflow\web\dto\ImportReportDTO.java
+C:\Users\Paula Pelizer\Downloads\projetoFinalMaisPraTi_Paula-main\docflow-fullstack\backend\src\main\java\com\adi\docflow\config\security\OpenApiConfig.java
 C:\Users\Paula Pelizer\Downloads\projetoFinalMaisPraTi_Paula-main\docflow-fullstack\backend\src\main\java\com\adi\docflow\repository\ResourceRepository.java
 C:\Users\Paula Pelizer\Downloads\projetoFinalMaisPraTi_Paula-main\docflow-fullstack\backend\src\main\java\com\adi\docflow\web\dto\OrganizationDTO.java
 C:\Users\Paula Pelizer\Downloads\projetoFinalMaisPraTi_Paula-main\docflow-fullstack\backend\src\main\java\com\adi\docflow\model\Document.java

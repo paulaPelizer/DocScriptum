@@ -54,7 +54,7 @@ const FILTER_OPTIONS = [
   { key: "status", label: "Status" },
 ] as const
 
-type FilterKey = typeof FILTER_OPTIONS[number]["key"]
+type FilterKey = (typeof FILTER_OPTIONS)[number]["key"]
 
 export default function RequestsPage() {
   const navigate = useNavigate()
@@ -68,7 +68,7 @@ export default function RequestsPage() {
   const [q, setQ] = useState(urlQ)
   const debouncedQ = useDebounced(q, 400)
 
-  // >>> filtros: múltipla seleção (como em clients/documents)
+  // filtros: múltipla seleção (como em projects)
   const ALL_FIELDS = FILTER_OPTIONS.map((o) => o.key) as FilterKey[]
   const [selectedFields, setSelectedFields] = useState<FilterKey[]>(ALL_FIELDS)
 
@@ -111,8 +111,6 @@ export default function RequestsPage() {
         page: p,
         size: pageSize,
         sort: "requestDate,desc",
-        // Se seu serviço aceitar, também enviamos os campos selecionados:
-        
         fields: selectedFields.join(","),
       } as any)
       setPage(resp)
@@ -133,72 +131,82 @@ export default function RequestsPage() {
   }, [statuses, pageSize, debouncedQ, selectedFields])
 
   const onSearchEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") load(0) // opção manual, além do debounce
+    if (e.key === "Enter") load(0)
   }
 
   // status badge
   const StatusBadge = ({ s }: { s: RequestStatus }) => {
-  let label: string
-  let variant: "outline" | "secondary" | "default" | "destructive"
+    let label: string
+    let variant: "outline" | "secondary" | "default" | "destructive"
 
-  switch (s) {
-    case "PENDING":
-      label = "Pendente"
-      variant = "outline"
-      break
-    case "IN_PROGRESS":
-      label = "Em análise"
-      variant = "secondary"
-      break
-    case "WAITING_CLIENT":
-      label = "Aguardando cliente"
-      variant = "secondary"
-      break
-    case "WAITING_ADM":
-      label = "Aguardando adm."
-      variant = "secondary"
-      break
-    case "COMPLETED":
-      label = "Concluída"
-      variant = "default"
-      break
-    case "REJECTED":
-      label = "Rejeitada"
-      variant = "destructive"
-      break
-    case "CANCELLED":
-    default:
-      label = "Cancelada"
-      variant = "secondary"
-      break
+    switch (s) {
+      case "PENDING":
+        label = "Pendente"
+        variant = "outline"
+        break
+      case "IN_PROGRESS":
+        label = "Em análise"
+        variant = "secondary"
+        break
+      case "WAITING_CLIENT":
+        label = "Aguardando cliente"
+        variant = "secondary"
+        break
+      case "WAITING_ADM":
+        label = "Aguardando adm."
+        variant = "secondary"
+        break
+      case "COMPLETED":
+        label = "Concluída"
+        variant = "default"
+        break
+      case "REJECTED":
+        label = "Rejeitada"
+        variant = "destructive"
+        break
+      case "CANCELLED":
+      default:
+        label = "Cancelada"
+        variant = "secondary"
+        break
+    }
+
+    return <Badge variant={variant}>{label}</Badge>
   }
-
-  return <Badge variant={variant}>{label}</Badge>
-}
 
   const fmtDate = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString() : "—")
 
   // --- filtragem local adicional com base nos campos selecionados ---
-  const normalize = (v: unknown) =>
-    (v ?? "").toString().toLowerCase()
+  const normalize = (v: unknown) => (v ?? "").toString().toLowerCase()
 
   const fieldValue = (r: RequestSummary, key: FilterKey): string => {
     switch (key) {
-      case "number": return normalize(r.number)
-      case "projectName": return normalize(r.projectName)
-      case "originName": return normalize(r.originName)
-      case "targetName": return normalize(r.targetName)
-      case "purpose": return normalize(r.purpose)
-      case "documents": return normalize(r.documents)
-      case "requestDate": return normalize(r.requestDate ? new Date(r.requestDate).toLocaleDateString() : "")
+      case "number":
+        return normalize(r.number)
+      case "projectName":
+        return normalize(r.projectName)
+      case "originName":
+        return normalize(r.originName)
+      case "targetName":
+        return normalize(r.targetName)
+      case "purpose":
+        return normalize(r.purpose)
+      case "documents":
+        return normalize(r.documents)
+      case "requestDate":
+        return normalize(r.requestDate ? new Date(r.requestDate).toLocaleDateString() : "")
       case "status": {
         const s = r.status
         const label =
-          s === "PENDING" ? "pendente" :
-          s === "IN_PROGRESS" ? "em análise" :
-          s === "COMPLETED" ? "concluída" :
-          s === "REJECTED" ? "rejeitada" :
-          "cancelada"
+          s === "PENDING"
+            ? "pendente"
+            : s === "IN_PROGRESS"
+            ? "em análise"
+            : s === "COMPLETED"
+            ? "concluída"
+            : s === "REJECTED"
+            ? "rejeitada"
+            : "cancelada"
         return `${normalize(s)} ${label}`
       }
     }
@@ -208,17 +216,18 @@ export default function RequestsPage() {
     const query = q.trim().toLowerCase()
     if (!query) return rows
     const fields = selectedFields.length ? selectedFields : ALL_FIELDS
-    return rows.filter(r =>
-      fields.some(f => fieldValue(r, f).includes(query))
-    )
+    return rows.filter((r) => fields.some((f) => fieldValue(r, f).includes(query)))
   }
 
-  // seleção (apenas pendentes) — agora baseada nas linhas *visíveis* (filtradas)
+  // seleção (apenas pendentes) — baseada nas linhas visíveis (filtradas)
   const pendingAllRows = useMemo(
     () => (activeTab === "pending" ? page?.content ?? [] : []),
     [activeTab, page]
   )
-  const pendingRows = useMemo(() => applyLocalFilter(pendingAllRows), [pendingAllRows, q, selectedFields])
+  const pendingRows = useMemo(
+    () => applyLocalFilter(pendingAllRows),
+    [pendingAllRows, q, selectedFields]
+  )
 
   const doneAllRows = useMemo(
     () => (activeTab === "completed" ? page?.content ?? [] : []),
@@ -227,8 +236,11 @@ export default function RequestsPage() {
   const doneRows = useMemo(() => applyLocalFilter(doneAllRows), [doneAllRows, q, selectedFields])
 
   const handleSelectOne = (id: number) => {
-    setSelectedRequests((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+    setSelectedRequests((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    )
   }
+
   const handleSelectAll = () => {
     if (!pendingRows.length) return
     if (selectedRequests.length === pendingRows.length) setSelectedRequests([])
@@ -244,7 +256,7 @@ export default function RequestsPage() {
     }, 500)
   }
 
-  // helpers de filtro: manter menu aberto ao marcar
+  // helpers de filtro
   const toggleField = (key: FilterKey, checked: boolean) => {
     setSelectedFields((prev) => {
       if (checked) {
@@ -263,14 +275,18 @@ export default function RequestsPage() {
 
       <main className="flex-1 p-4 md:p-6">
         <div className="container mx-auto">
-          <PageHeader title="Solicitações" description="Gerencie solicitações de tramitação de documentos">
+          <PageHeader
+            title="Solicitações"
+            description="Gerencie solicitações de tramitação de documentos"
+          >
             <div className="flex gap-2 w-full md:w-auto">
+              {/* Busca igual ao ProjectsPage (estrutura e classes) */}
               <div className="relative w-full md:w-auto">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="search"
                   placeholder="Buscar solicitações..."
-                  className="w-full md:w-[300px] pl-8 pr-8"
+                  className="w-full md:w-[260px] pl-8 pr-8"
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
                   onKeyDown={onSearchEnter}
@@ -287,7 +303,7 @@ export default function RequestsPage() {
                 )}
               </div>
 
-              {/* Filtros (múltipla seleção, com limpar/selecionar tudo; menu não fecha ao marcar) */}
+              {/* Filtros (mesmo padrão da página de projetos) */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="whitespace-nowrap">
@@ -302,7 +318,7 @@ export default function RequestsPage() {
                     <DropdownMenuCheckboxItem
                       key={opt.key}
                       checked={selectedFields.includes(opt.key)}
-                      onSelect={(e) => e.preventDefault()}            // mantém o menu aberto
+                      onSelect={(e) => e.preventDefault()} // mantém aberto ao marcar
                       onCheckedChange={(c) => toggleField(opt.key, Boolean(c))}
                     >
                       {opt.label}
@@ -325,8 +341,16 @@ export default function RequestsPage() {
                 </DropdownMenuContent>
               </DropdownMenu>
 
+              {selectedRequests.length > 0 && activeTab === "pending" && (
+                <Button onClick={handleAttendRequests} variant="outline">
+                  <UserCheck className="mr-2 h-4 w-4" />
+                  Atender {selectedRequests.length} Solicitaç
+                  {selectedRequests.length === 1 ? "ão" : "ões"}
+                </Button>
+              )}
+
               <Link to="/requests/new">
-                <Button variant="outline">
+                <Button>
                   <Plus className="mr-2 h-4 w-4" />
                   Nova Solicitação
                 </Button>
@@ -346,101 +370,96 @@ export default function RequestsPage() {
 
             {/* PENDENTES */}
             <TabsContent value="pending">
-              <Card className="neon-border">
+              <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
                 <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle>Solicitações Pendentes</CardTitle>
-                      <CardDescription>Solicitações que aguardam análise ou aprovação</CardDescription>
-                    </div>
-                    {selectedRequests.length > 0 && (
-                      <Button onClick={handleAttendRequests} disabled={isProcessing} className="neon-border" size="sm">
-                        <UserCheck className="mr-2 h-4 w-4" />
-                        {isProcessing
-                          ? "Processando..."
-                          : `Atender ${selectedRequests.length} Solicitaç${
-                              selectedRequests.length === 1 ? "ão" : "ões"
-                            }`}
-                      </Button>
-                    )}
-                  </div>
+                  <CardTitle>Solicitações Pendentes</CardTitle>
+                  <CardDescription>
+                    Solicitações que aguardam análise ou aprovação
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {error && <div className="mb-2 text-sm text-red-500">{error}</div>}
-                  {loading && <div className="text-sm text-muted-foreground">Carregando...</div>}
+                  {loading && (
+                    <div className="py-8 text-sm text-muted-foreground">Carregando…</div>
+                  )}
 
                   {!loading && (
-                    <>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="w-12">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-12">
+                            <Checkbox
+                              checked={
+                                pendingRows.length > 0 &&
+                                selectedRequests.length === pendingRows.length
+                              }
+                              onCheckedChange={handleSelectAll}
+                              aria-label="Selecionar todas"
+                            />
+                          </TableHead>
+                          <TableHead>Número</TableHead>
+                          <TableHead>Projeto</TableHead>
+                          <TableHead>Origem</TableHead>
+                          <TableHead>Destino</TableHead>
+                          <TableHead>Propósito</TableHead>
+                          <TableHead>Documentos</TableHead>
+                          <TableHead>Data</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {pendingRows.map((r) => (
+                          <TableRow key={r.id}>
+                            <TableCell>
                               <Checkbox
-                                checked={
-                                  pendingRows.length > 0 &&
-                                  selectedRequests.length === pendingRows.length
-                                }
-                                onCheckedChange={handleSelectAll}
-                                aria-label="Selecionar todas"
+                                checked={selectedRequests.includes(r.id)}
+                                onCheckedChange={() => handleSelectOne(r.id)}
+                                aria-label={`Selecionar ${r.number}`}
                               />
-                            </TableHead>
-                            <TableHead>Número</TableHead>
-                            <TableHead>Projeto</TableHead>
-                            <TableHead>Origem</TableHead>
-                            <TableHead>Destino</TableHead>
-                            <TableHead>Propósito</TableHead>
-                            <TableHead>Documentos</TableHead>
-                            <TableHead>Data</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Ações</TableHead>
+                            </TableCell>
+                            <TableCell className="font-medium">{r.number}</TableCell>
+                            <TableCell>{r.projectName ?? "—"}</TableCell>
+                            <TableCell>{r.originName ?? "—"}</TableCell>
+                            <TableCell>{r.targetName ?? "—"}</TableCell>
+                            <TableCell>{r.purpose ?? "—"}</TableCell>
+                            <TableCell>{r.documents ?? 0}</TableCell>
+                            <TableCell>{fmtDate(r.requestDate)}</TableCell>
+                            <TableCell>
+                              <StatusBadge s={r.status} />
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                    <span className="sr-only">Abrir menu</span>
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem>
+                                    <Link to={`/requests/${r.id}`} className="flex w-full">
+                                      Ver detalhes
+                                    </Link>
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
                           </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {pendingRows.map((r) => (
-                            <TableRow key={r.id}>
-                              <TableCell>
-                                <Checkbox
-                                  checked={selectedRequests.includes(r.id)}
-                                  onCheckedChange={() => handleSelectOne(r.id)}
-                                  aria-label={`Selecionar ${r.number}`}
-                                />
-                              </TableCell>
-                              <TableCell className="font-medium">{r.number}</TableCell>
-                              <TableCell>{r.projectName ?? "—"}</TableCell>
-                              <TableCell>{r.originName ?? "—"}</TableCell>
-                              <TableCell>{r.targetName ?? "—"}</TableCell>
-                              <TableCell>{r.purpose ?? "—"}</TableCell>
-                              <TableCell>{r.documents ?? 0}</TableCell>
-                              <TableCell>{fmtDate(r.requestDate)}</TableCell>
-                              <TableCell><StatusBadge s={r.status} /></TableCell>
-                              <TableCell className="text-right">
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon">
-                                      <MoreHorizontal className="h-4 w-4" />
-                                      <span className="sr-only">Abrir menu</span>
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem>
-                                      <Link to={`/requests/${r.id}`} className="flex w-full">
-                                        Ver detalhes
-                                      </Link>
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                        ))}
 
-                      {pendingRows.length === 0 && (
-                        <div className="text-center py-8 text-muted-foreground">
-                          Nenhuma solicitação pendente encontrada.
-                        </div>
-                      )}
-                    </>
+                        {pendingRows.length === 0 && (
+                          <TableRow>
+                            <TableCell
+                              colSpan={10}
+                              className="py-6 text-sm text-muted-foreground text-center"
+                            >
+                              Nenhuma solicitação pendente encontrada.
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
                   )}
                 </CardContent>
               </Card>
@@ -448,78 +467,87 @@ export default function RequestsPage() {
 
             {/* CONCLUÍDAS */}
             <TabsContent value="completed">
-              <Card className="neon-border">
+              <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
                 <CardHeader>
                   <CardTitle>Solicitações Concluídas</CardTitle>
-                  <CardDescription>Solicitações que já foram processadas e concluídas</CardDescription>
+                  <CardDescription>
+                    Solicitações que já foram processadas e concluídas
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {error && <div className="mb-2 text-sm text-red-500">{error}</div>}
-                  {loading && <div className="text-sm text-muted-foreground">Carregando...</div>}
+                  {loading && (
+                    <div className="py-8 text-sm text-muted-foreground">Carregando…</div>
+                  )}
 
                   {!loading && (
-                    <>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Número</TableHead>
-                            <TableHead>Projeto</TableHead>
-                            <TableHead>Origem</TableHead>
-                            <TableHead>Destino</TableHead>
-                            <TableHead>Propósito</TableHead>
-                            <TableHead>GRD</TableHead>
-                            <TableHead>Data</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Ações</TableHead>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Número</TableHead>
+                          <TableHead>Projeto</TableHead>
+                          <TableHead>Origem</TableHead>
+                          <TableHead>Destino</TableHead>
+                          <TableHead>Propósito</TableHead>
+                          <TableHead>GRD</TableHead>
+                          <TableHead>Data</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {doneRows.map((r) => (
+                          <TableRow key={r.id}>
+                            <TableCell className="font-medium">{r.number}</TableCell>
+                            <TableCell>{r.projectName ?? "—"}</TableCell>
+                            <TableCell>{r.originName ?? "—"}</TableCell>
+                            <TableCell>{r.targetName ?? "—"}</TableCell>
+                            <TableCell>{r.purpose ?? "—"}</TableCell>
+                            <TableCell>
+                              <Link
+                                to={`/documents/routing/${r.id}/grd`}
+                                className="flex items-center gap-1 text-primary hover:underline"
+                              >
+                                Ver Documento de Tramitação
+                                <Eye className="h-3 w-3" />
+                              </Link>
+                            </TableCell>
+                            <TableCell>{fmtDate(r.requestDate)}</TableCell>
+                            <TableCell>
+                              <StatusBadge s={r.status} />
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                    <span className="sr-only">Abrir menu</span>
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem>
+                                    <Link to={`/requests/${r.id}`} className="flex w-full">
+                                      Ver detalhes
+                                    </Link>
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
                           </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {doneRows.map((r) => (
-                            <TableRow key={r.id}>
-                              <TableCell className="font-medium">{r.number}</TableCell>
-                              <TableCell>{r.projectName ?? "—"}</TableCell>
-                              <TableCell>{r.originName ?? "—"}</TableCell>
-                              <TableCell>{r.targetName ?? "—"}</TableCell>
-                              <TableCell>{r.purpose ?? "—"}</TableCell>
-                              <TableCell>
-                                <Link
-                                  to={`/documents/routing/${r.id}/grd`}
-                                  className="flex items-center gap-1 text-primary hover:underline neon-text"
-                                >
-                                  Ver GRD
-                                  <Eye className="h-3 w-3" />
-                                </Link>
-                              </TableCell>
-                              <TableCell>{fmtDate(r.requestDate)}</TableCell>
-                              <TableCell><StatusBadge s={r.status} /></TableCell>
-                              <TableCell className="text-right">
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon">
-                                      <MoreHorizontal className="h-4 w-4" />
-                                      <span className="sr-only">Abrir menu</span>
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem>
-                                      <Link to={`/requests/${r.id}`} className="flex w-full">
-                                        Ver detalhes
-                                      </Link>
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                        ))}
 
-                      {doneRows.length === 0 && (
-                        <div className="text-center py-8 text-muted-foreground">
-                          Nenhuma solicitação concluída encontrada.
-                        </div>
-                      )}
-                    </>
+                        {doneRows.length === 0 && (
+                          <TableRow>
+                            <TableCell
+                              colSpan={9}
+                              className="py-6 text-sm text-muted-foreground text-center"
+                            >
+                              Nenhuma solicitação concluída encontrada.
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
                   )}
                 </CardContent>
               </Card>

@@ -51,7 +51,10 @@ export default function ProjectRoutingPage() {
 
       <main className="flex-1 p-4 md:p-6">
         <div className="container mx-auto max-w-6xl">
-          <PageHeader title="Tramitações - Projeto Alpha" description="Histórico de tramitações do projeto">
+          <PageHeader
+            title="Tramitações - Projeto Alpha"
+            description="Histórico de tramitações do projeto"
+          >
             <div className="flex gap-2 w-full md:w-auto">
               <Link to="/projects">
                 <Button variant="outline">
@@ -62,7 +65,11 @@ export default function ProjectRoutingPage() {
 
               <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input type="search" placeholder="Buscar tramitações..." className="w-[250px] pl-8" />
+                <Input
+                  type="search"
+                  placeholder="Buscar tramitações..."
+                  className="w-[250px] pl-8"
+                />
               </div>
 
               <Link to="/documents/routing/new">
@@ -74,11 +81,13 @@ export default function ProjectRoutingPage() {
             </div>
           </PageHeader>
 
-          <Card className="neon-border">
+          {/* ⭐ Card com vidro no modo claro */}
+          <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
             <CardHeader>
               <CardTitle>Histórico de Tramitações</CardTitle>
               <CardDescription>Todas as tramitações realizadas no projeto</CardDescription>
             </CardHeader>
+
             <CardContent>
               <Table>
                 <TableHeader>
@@ -91,6 +100,7 @@ export default function ProjectRoutingPage() {
                     <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
+
                 <TableBody>
                   {routings.map((routing) => (
                     <TableRow key={routing.id}>
@@ -100,12 +110,16 @@ export default function ProjectRoutingPage() {
                           {routing.grdNumber}
                         </div>
                       </TableCell>
+
                       <TableCell>{routing.origin}</TableCell>
                       <TableCell>{routing.destination}</TableCell>
                       <TableCell>{routing.documentsCount}</TableCell>
                       <TableCell>{routing.date}</TableCell>
+
                       <TableCell>
-                        <Badge variant={getStatusColor(routing.status)}>{routing.status}</Badge>
+                        <Badge variant={getStatusColor(routing.status)}>
+                          {routing.status}
+                        </Badge>
                       </TableCell>
                     </TableRow>
                   ))}

@@ -283,7 +283,7 @@ export default function EditProjectPage() {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Informações Básicas */}
-            <Card className="neon-border">
+            <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
               <CardHeader>
                 <CardTitle>Informações Básicas</CardTitle>
                 <CardDescription>Dados principais do projeto</CardDescription>
@@ -376,12 +376,14 @@ export default function EditProjectPage() {
             </Card>
 
             {/* Disciplinas e Documentos */}
-            <Card className="neon-border">
+            <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle>Disciplinas e Documentos</CardTitle>
-                    <CardDescription>Configure as disciplinas do projeto, seus documentos e destinatários</CardDescription>
+                    <CardDescription>
+                      Configure as disciplinas do projeto, seus documentos e destinatários
+                    </CardDescription>
                   </div>
                   <Button type="button" onClick={addDisciplina} variant="outline" size="sm">
                     <Plus className="mr-2 h-4 w-4" />
@@ -391,7 +393,10 @@ export default function EditProjectPage() {
               </CardHeader>
               <CardContent className="space-y-6">
                 {disciplinas.map((disciplina, index) => (
-                  <div key={disciplina.id} className="border-2 rounded-lg p-6 space-y-4">
+                  <div
+                    key={disciplina.id}
+                    className="border border-border/60 bg-background/60 dark:bg-background/20 rounded-lg p-6 space-y-4"
+                  >
                     <div className="flex items-center justify-between">
                       <h3 className="text-lg font-semibold">Disciplina {index + 1}</h3>
                       {disciplinas.length > 1 && (
@@ -486,7 +491,10 @@ export default function EditProjectPage() {
                                       )
                                     }
                                   />
-                                  <Label htmlFor={`disciplina-${disciplina.id}-${groupType}-${user.id}`} className="text-xs">
+                                  <Label
+                                    htmlFor={`disciplina-${disciplina.id}-${groupType}-${user.id}`}
+                                    className="text-xs"
+                                  >
                                     {user.name}
                                     <br />
                                     <span className="text-muted-foreground">{user.email}</span>
@@ -504,12 +512,14 @@ export default function EditProjectPage() {
             </Card>
 
             {/* Marcos Contratuais */}
-            <Card className="neon-border">
+            <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle>Marcos Contratuais</CardTitle>
-                    <CardDescription>Defina os marcos e datas limite para entrega dos documentos</CardDescription>
+                    <CardDescription>
+                      Defina os marcos e datas limite para entrega dos documentos
+                    </CardDescription>
                   </div>
                   <Button type="button" onClick={addMilestone} variant="outline" size="sm">
                     <Plus className="mr-2 h-4 w-4" />
@@ -519,7 +529,10 @@ export default function EditProjectPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 {milestones.map((milestone, index) => (
-                  <div key={milestone.id} className="border rounded-lg p-4 space-y-4">
+                  <div
+                    key={milestone.id}
+                    className="border border-border/60 bg-background/60 dark:bg-background/20 rounded-lg p-4 space-y-4"
+                  >
                     <div className="flex items-center justify-between">
                       <h4 className="font-medium">Marco {index + 1}</h4>
                       {milestones.length > 1 && (

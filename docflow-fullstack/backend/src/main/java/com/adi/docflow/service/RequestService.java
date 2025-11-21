@@ -16,14 +16,18 @@ import com.adi.docflow.web.dto.RequestSummaryDTO;
 import com.adi.docflow.web.dto.UpdateRequestDTO;
 
 import jakarta.transaction.Transactional;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.lang.reflect.Field;
 import java.time.OffsetDateTime;
 import java.util.*;
+
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 @Service
 public class RequestService {
@@ -89,30 +93,62 @@ public class RequestService {
                 UUID.randomUUID().toString().substring(0, 6).toUpperCase();
     }
 
-    /** Protocolo único da request (garantido via repository). */
+    /** Protocolo "praticamente único" gerado localmente (sem consulta ao banco). */
     private String generateUniqueRequestProtocol() {
         int year = OffsetDateTime.now().getYear();
-        String p;
-        int tries = 0;
-        do {
-            int seq = 100000 + rnd.nextInt(900000);
-            p = "REQ-" + year + "-" + seq;
-        } while (requestRepo.existsByProtocol(p) && ++tries < 20);
-        return p;
+        int seq = 100000 + rnd.nextInt(900000); // 6 dígitos
+        return "REQ-" + year + "-" + seq;
     }
 
     /* ===================== CRUD/Fluxo principal ===================== */
 
     @Transactional
     public Request create(Request req, List<Long> documentIds) {
+
+        // --- Garantir Project válido (evita FK quebrada) ---
+        if (req.getProject() == null || req.getProject().getId() == null) {
+            throw new ResponseStatusException(
+                    BAD_REQUEST,
+                    "Projeto da solicitação é obrigatório (projectId não informado)."
+            );
+        }
+        Project project = requireProject(req.getProject().getId());
+        req.setProject(project);
+
+        // --- Identificadores e datas ---
         if (req.getRequestNumber() == null || req.getRequestNumber().isBlank()) {
             req.setRequestNumber(nextRequestNumber());
         }
+
+        if (req.getProtocol() == null || req.getProtocol().isBlank()) {
+            req.setProtocol(generateUniqueRequestProtocol());
+        }
+
         OffsetDateTime now = OffsetDateTime.now();
-        req.setCreatedAt(now);
+        if (req.getCreatedAt() == null) {
+            req.setCreatedAt(now);
+        }
         req.setUpdatedAt(now);
 
-        Request saved = requestRepo.save(req);
+        // --- Status padrão (caso venha nulo) ---
+        if (req.getStatus() == null) {
+            // Ajuste aqui se você tiver um status inicial específico, ex: NEW ou WAITING_ADM
+            req.setStatus(RequestStatus.WAITING_ADM);
+        }
+
+        Request saved;
+        try {
+            saved = requestRepo.save(req);
+        } catch (DataIntegrityViolationException ex) {
+            String root = getRootCauseMessage(ex);
+            System.err.println("[REQUEST CREATE] Erro de integridade: " + root);
+
+            throw new ResponseStatusException(
+                    BAD_REQUEST,
+                    "Erro ao salvar solicitação: " + root,
+                    ex
+            );
+        }
 
         // Vinculação de documentos
         if (documentIds != null && !documentIds.isEmpty()) {
@@ -251,7 +287,7 @@ public class RequestService {
     /**
      * Deve ser chamado sempre que um Document tiver seu arquivo / upload_hash atualizado.
      *  - Atualiza snapshot de doc_edit_count (e, se necessário, da hash base);
-         *  - Se a Request estiver em WAITING_CLIENT, muda para WAITING_ADM.
+     *  - Se a Request estiver em WAITING_CLIENT, muda para WAITING_ADM.
      */
     @Transactional
     public void handleDocumentUpdated(Long documentId) {
@@ -335,5 +371,15 @@ public class RequestService {
 
             reqDocRepo.save(rd);
         }
+    }
+
+    /* =============== Helper para mensagem raiz de erro =============== */
+
+    private String getRootCauseMessage(Throwable t) {
+        Throwable cur = t;
+        while (cur.getCause() != null) {
+            cur = cur.getCause();
+        }
+        return cur.getMessage();
     }
 }

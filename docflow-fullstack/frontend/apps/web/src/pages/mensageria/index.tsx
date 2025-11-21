@@ -42,7 +42,7 @@ type MensageriaItem = {
   empresa: string
   cnpj: string
   projeto?: string | null
-  tipoEvento: string // e.g., S-1000, S-1200...
+  tipoEvento: string // e.g., DOC-M-REMESSA, S-1200...
   descricao: string
   status: ESocialStatus
   protocolo?: string | null
@@ -53,82 +53,124 @@ type MensageriaItem = {
   atualizadoEm?: string | null // ISO
 }
 
-/* ================== Mock ================== */
+/* ================== Mock alinhado à Tabela de Tipos/Temporalidade ================== */
 const MOCK: MensageriaItem[] = [
+  // Gestão de Documentos e Protocolo
   {
     id: 1,
-    empresa: "Empresa ABC",
-    cnpj: "12.345.678/0001-99",
-    projeto: "Projeto Alpha",
-    tipoEvento: "S-1000",
-    descricao: "Informações do Empregador/Contribuinte",
+    empresa: "DOCScriptum",
+    cnpj: "00.000.000/0001-00",
+    projeto: "Projeto Alpha – Subestação 230kV",
+    tipoEvento: "DOC-M-REMESSA",
+    descricao: "DOCM de Remessa + AR de Recebimento (Gestão de Documentos e Protocolo)",
     status: "APPROVED",
-    protocolo: "PRT-2025-000123",
-    recibo: "RCB-7711AA",
-    lote: "L-000045",
+    protocolo: "DOC-PRT-2025-000123",
+    recibo: "DOC-RCB-7711AA",
+    lote: "L-DOC-000045",
     ambiente: "PRODUCAO",
     criadoEm: "2025-05-10T10:12:00Z",
     atualizadoEm: "2025-05-10T10:14:30Z",
   },
+  // Gestão de Projetos de TI e Engenharia de Software
   {
     id: 2,
-    empresa: "Construtora XYZ",
-    cnpj: "98.765.432/0001-11",
-    projeto: "Expansão Sede",
-    tipoEvento: "S-1010",
-    descricao: "Tabela de Rubricas - inclusão",
+    empresa: "DOCScriptum",
+    cnpj: "00.000.000/0001-00",
+    projeto: "SIGAD Corporativo",
+    tipoEvento: "DOC-CAT-TIPOS",
+    descricao: "Catálogo de Tipos Documentais + Plano de Projeto (Gestão de Projetos de TI)",
     status: "SENT",
-    protocolo: "PRT-2025-000789",
+    protocolo: "DOC-PRT-2025-000789",
     recibo: null,
-    lote: "L-000051",
+    lote: "L-DOC-000051",
     ambiente: "HOMOLOG",
     criadoEm: "2025-05-11T13:40:00Z",
     atualizadoEm: "2025-05-11T13:41:00Z",
   },
+  // Desenvolvimento e Manutenção de Sistemas
   {
     id: 3,
-    empresa: "Indústria 123",
-    cnpj: "44.222.111/0001-55",
-    projeto: "Reforma Unidade 3",
-    tipoEvento: "S-1200",
-    descricao: "Remuneração de trabalhador (competência 04/2025)",
+    empresa: "DOCScriptum",
+    cnpj: "00.000.000/0001-00",
+    projeto: "Módulo de Preservação Digital",
+    tipoEvento: "DOC-SRS-STD",
+    descricao:
+      "Pacote SRS/ADD/STD enviado para repositório técnico (Desenvolvimento e Manutenção de Sistemas)",
     status: "ERROR",
-    protocolo: "PRT-2025-000992",
+    protocolo: "DOC-PRT-2025-000992",
     recibo: null,
-    lote: "L-000061",
+    lote: "L-DOC-000061",
     ambiente: "PRODUCAO",
     criadoEm: "2025-05-12T08:05:00Z",
     atualizadoEm: "2025-05-12T08:06:12Z",
   },
+  // Documentação Técnica e Científica Final
   {
     id: 4,
-    empresa: "Empresa ABC",
-    cnpj: "12.345.678/0001-99",
-    projeto: "Projeto Alpha",
-    tipoEvento: "S-1210",
-    descricao: "Pagamentos de rendimentos do trabalho",
+    empresa: "DOCScriptum",
+    cnpj: "00.000.000/0001-00",
+    projeto: "Projeto Beta – Linha de Transmissão",
+    tipoEvento: "DOC-REL-MANUAL",
+    descricao:
+      "Relatório Técnico Final + Manual de Operação (Documentação Técnica e Científica Final)",
     status: "PROCESSING",
-    protocolo: "PRT-2025-001003",
+    protocolo: "DOC-PRT-2025-001003",
     recibo: null,
-    lote: "L-000062",
+    lote: "L-DOC-000062",
     ambiente: "PRODUCAO",
     criadoEm: "2025-05-12T09:20:00Z",
     atualizadoEm: null,
   },
+  // Administração e Infraestrutura
   {
     id: 5,
-    empresa: "DocScriptum",
+    empresa: "DOCScriptum",
     cnpj: "00.000.000/0001-00",
-    projeto: null,
-    tipoEvento: "S-2230",
-    descricao: "Afastamento temporário - inclusão",
-    status: "SENT",
-    protocolo: "PRT-2025-001055",
-    recibo: "RCB-9922FF",
-    lote: "L-000064",
+    projeto: "Administração de Contratos de Projeto",
+    tipoEvento: "DOC-CONTR-RUBRICAS",
+    descricao:
+      "Contrato de Projeto + Cadastro de Rubricas Técnico-Científicas (Administração e Infraestrutura)",
+    status: "APPROVED",
+    protocolo: "DOC-PRT-2025-001055",
+    recibo: "DOC-RCB-9922FF",
+    lote: "L-DOC-000064",
     ambiente: "HOMOLOG",
     criadoEm: "2025-05-12T12:00:00Z",
     atualizadoEm: "2025-05-12T12:03:55Z",
+  },
+  // Cadastro Institucional
+  {
+    id: 6,
+    empresa: "DOCScriptum",
+    cnpj: "00.000.000/0001-00",
+    projeto: "Cadastro Institucional",
+    tipoEvento: "DOC-CAD-CLI-FOR",
+    descricao:
+      "Cadastro de Cliente/Fornecedor + Identificação de Produto Documental (Cadastro Institucional)",
+    status: "SENT",
+    protocolo: "DOC-PRT-2025-001099",
+    recibo: null,
+    lote: "L-DOC-000066",
+    ambiente: "PRODUCAO",
+    criadoEm: "2025-05-12T15:10:00Z",
+    atualizadoEm: "2025-05-12T15:11:30Z",
+  },
+  // Preservação Digital e Recolhimento Arquivístico
+  {
+    id: 7,
+    empresa: "DOCScriptum",
+    cnpj: "00.000.000/0001-00",
+    projeto: "Recolhimento Arquivístico – Coleção Permanente",
+    tipoEvento: "DOC-OAIS-AIP",
+    descricao:
+      "Pacote OAIS (AIP) + Log de Preservação enviado para repositório permanente (Preservação Digital)",
+    status: "APPROVED",
+    protocolo: "DOC-PRT-2025-001120",
+    recibo: "DOC-RCB-5533ZZ",
+    lote: "L-DOC-000070",
+    ambiente: "PRODUCAO",
+    criadoEm: "2025-05-13T09:00:00Z",
+    atualizadoEm: "2025-05-13T09:03:10Z",
   },
 ]
 
@@ -137,13 +179,13 @@ const FILTER_OPTIONS = [
   { key: "empresa", label: "Empresa" },
   { key: "cnpj", label: "CNPJ" },
   { key: "projeto", label: "Projeto" },
-  { key: "tipo", label: "Tipo (S-*)" },
+  { key: "tipo", label: "Tipo (evento/doc)" },
   { key: "status", label: "Status" },
   { key: "protocolo", label: "Protocolo/Recibo/Lote" },
   { key: "ambiente", label: "Ambiente" },
   { key: "descricao", label: "Descrição" },
 ] as const
-type FilterKey = typeof FILTER_OPTIONS[number]["key"]
+type FilterKey = (typeof FILTER_OPTIONS)[number]["key"]
 
 function norm(s: string | null | undefined) {
   return (s ?? "")
@@ -195,7 +237,7 @@ export default function MensageriaPage() {
   const [q, setQ] = useState(urlQ)
   const debouncedQ = useDebounced(q, 400)
 
-  const ALL_FIELDS = FILTER_OPTIONS.map(o => o.key) as FilterKey[]
+  const ALL_FIELDS = FILTER_OPTIONS.map((o) => o.key) as FilterKey[]
   const [selectedFields, setSelectedFields] = useState<FilterKey[]>(ALL_FIELDS)
 
   // sync tab/query -> URL
@@ -212,11 +254,11 @@ export default function MensageriaPage() {
   const rowsByTab = useMemo(() => {
     switch (activeTab) {
       case "errors":
-        return MOCK.filter(r => r.status === "ERROR")
+        return MOCK.filter((r) => r.status === "ERROR")
       case "processing":
-        return MOCK.filter(r => r.status === "PROCESSING" || r.status === "SENT")
+        return MOCK.filter((r) => r.status === "PROCESSING" || r.status === "SENT")
       case "approved":
-        return MOCK.filter(r => r.status === "APPROVED")
+        return MOCK.filter((r) => r.status === "APPROVED")
       case "all":
       default:
         return MOCK
@@ -225,14 +267,22 @@ export default function MensageriaPage() {
 
   const fieldValue = (r: MensageriaItem, key: FilterKey) => {
     switch (key) {
-      case "empresa": return norm(r.empresa)
-      case "cnpj": return norm(r.cnpj)
-      case "projeto": return norm(r.projeto)
-      case "tipo": return norm(r.tipoEvento)
-      case "status": return norm(r.status)
-      case "protocolo": return norm(`${r.protocolo ?? ""} ${r.recibo ?? ""} ${r.lote ?? ""}`)
-      case "ambiente": return norm(r.ambiente === "PRODUCAO" ? "producao" : "homolog")
-      case "descricao": return norm(r.descricao)
+      case "empresa":
+        return norm(r.empresa)
+      case "cnpj":
+        return norm(r.cnpj)
+      case "projeto":
+        return norm(r.projeto)
+      case "tipo":
+        return norm(r.tipoEvento)
+      case "status":
+        return norm(r.status)
+      case "protocolo":
+        return norm(`${r.protocolo ?? ""} ${r.recibo ?? ""} ${r.lote ?? ""}`)
+      case "ambiente":
+        return norm(r.ambiente === "PRODUCAO" ? "producao" : "homolog")
+      case "descricao":
+        return norm(r.descricao)
     }
   }
 
@@ -240,16 +290,18 @@ export default function MensageriaPage() {
     const nq = norm(debouncedQ)
     if (!nq) return rowsByTab
     const fields = selectedFields.length ? selectedFields : ALL_FIELDS
-    return rowsByTab.filter(r => fields.some(f => fieldValue(r, f).includes(nq)))
+    return rowsByTab.filter((r) => fields.some((f) => fieldValue(r, f).includes(nq)))
   }, [rowsByTab, debouncedQ, selectedFields])
 
   const toggleField = (key: FilterKey, checked: boolean) => {
-    setSelectedFields(prev => (checked ? [...new Set([...prev, key])] : prev.filter(k => k !== key)))
+    setSelectedFields((prev) =>
+      checked ? [...new Set([...prev, key])] : prev.filter((k) => k !== key),
+    )
   }
 
   const handleEnterSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
-      // nada assíncrono aqui; o debounce já atualiza
+      // o debounce já atualiza o filtro
     }
   }
 
@@ -258,18 +310,18 @@ export default function MensageriaPage() {
       <AppHeader />
 
       <main className="flex-1 p-4 md:p-6">
-        <div className="container mx-auto">
+        <div className="container mx-auto max-w-6xl">
           <PageHeader
             title="Mensageria"
-            description="Monitore os eventos do eSocial (envios, retornos, erros e aprovações)"
+            description="Monitore eventos de integração do DOCScriptum: Documentos de tramitação e gestão, catálogos de tipos documentais, pacotes OAIS e demais mensagens de governança."
           >
             <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-end w-full">
               {/* Busca */}
-              <div className="relative w-full sm:w-[340px]">
+              <div className="relative w-full sm:w-[360px]">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="search"
-                  placeholder="Buscar por empresa, tipo (S-*), status, protocolo..."
+                  placeholder="Buscar por empresa, projeto, tipo de evento, status, protocolo..."
                   className="pl-8 pr-8"
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
@@ -310,7 +362,9 @@ export default function MensageriaPage() {
                   ))}
                   <DropdownMenuSeparator />
                   <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                    Dica: você pode digitar “S-1200 aprovado producao” para filtrar rápido.
+                    Dica: você pode digitar{" "}
+                    <span className="font-medium">{"\"DOC-M aprovado producao\""}</span> para
+                    localizar rapidamente os envios ligados à Tabela de Temporalidade.
                   </div>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -324,17 +378,33 @@ export default function MensageriaPage() {
           </PageHeader>
 
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="space-y-4">
-            <TabsList>
-              <TabsTrigger value="all">Todos</TabsTrigger>
-              <TabsTrigger value="processing">Em envio/Process.</TabsTrigger>
-              <TabsTrigger value="approved">Aprovados</TabsTrigger>
-              <TabsTrigger value="errors">Com erro</TabsTrigger>
+            <TabsList className="w-full justify-start rounded-xl bg-muted/60 p-1 shadow-inner overflow-x-auto">
+              <TabsTrigger value="all" className="flex-1">
+                Todos
+              </TabsTrigger>
+              <TabsTrigger value="processing" className="flex-1">
+                Em envio / Processando
+              </TabsTrigger>
+              <TabsTrigger value="approved" className="flex-1">
+                Aprovados
+              </TabsTrigger>
+              <TabsTrigger value="errors" className="flex-1">
+                Com erro
+              </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="all"><MensageriaTable rows={filteredRows} /></TabsContent>
-            <TabsContent value="processing"><MensageriaTable rows={filteredRows} /></TabsContent>
-            <TabsContent value="approved"><MensageriaTable rows={filteredRows} /></TabsContent>
-            <TabsContent value="errors"><MensageriaTable rows={filteredRows} /></TabsContent>
+            <TabsContent value="all">
+              <MensageriaTable rows={filteredRows} />
+            </TabsContent>
+            <TabsContent value="processing">
+              <MensageriaTable rows={filteredRows} />
+            </TabsContent>
+            <TabsContent value="approved">
+              <MensageriaTable rows={filteredRows} />
+            </TabsContent>
+            <TabsContent value="errors">
+              <MensageriaTable rows={filteredRows} />
+            </TabsContent>
           </Tabs>
         </div>
       </main>
@@ -345,25 +415,26 @@ export default function MensageriaPage() {
 /* ================== Tabela reutilizável ================== */
 function MensageriaTable({ rows }: { rows: MensageriaItem[] }) {
   return (
-    <Card className="neon-border">
+    <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
       <CardHeader className="py-4">
-        <CardTitle className="text-lg">Fila de eventos eSocial</CardTitle>
+        <CardTitle className="text-lg">Fila de eventos de integração documental</CardTitle>
         <CardDescription className="text-sm">
-          Acompanhe status, protocolos/recibos e ações por evento
+          Eventos ligados à Tabela de Temporalidade, Documentos de tramitação e gestão, cadastros institucionais e pacotes OAIS.
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-2">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[130px]">Empresa</TableHead>
-              <TableHead className="hidden lg:table-cell w-[140px]">Projeto</TableHead>
-              <TableHead className="w-[92px]">Evento</TableHead>
-              <TableHead className="hidden md:table-cell">Descrição</TableHead>
+              <TableHead className="w-[150px]">Empresa</TableHead>
+              <TableHead className="hidden lg:table-cell w-[180px]">Projeto</TableHead>
+              <TableHead className="w-[130px]">Tipo de Evento</TableHead>
+              {/* ↓ largura definida e sem truncate no body */}
+              <TableHead className="hidden md:table-cell w-[320px]">Descrição</TableHead>
               <TableHead className="w-[110px]">Ambiente</TableHead>
               <TableHead className="w-[110px]">Status</TableHead>
-              <TableHead className="hidden xl:table-cell w-[160px]">Protoc./Recibo/Lote</TableHead>
-              <TableHead className="hidden xl:table-cell w-[160px]">Atualizado</TableHead>
+              <TableHead className="hidden xl:table-cell w-[180px]">Protoc./Recibo/Lote</TableHead>
+              <TableHead className="hidden xl:table-cell w-[180px]">Atualizado</TableHead>
               <TableHead className="text-right w-[70px]">Ações</TableHead>
             </TableRow>
           </TableHeader>
@@ -383,8 +454,11 @@ function MensageriaTable({ rows }: { rows: MensageriaItem[] }) {
                   <div className="font-medium">{r.tipoEvento}</div>
                 </TableCell>
 
-                <TableCell className="hidden md:table-cell">
-                  <div className="truncate">{r.descricao}</div>
+                {/* ↓ aqui é onde muda de fato */}
+                <TableCell className="hidden md:table-cell align-top">
+                  <p className="text-sm leading-snug whitespace-normal break-words">
+                    {r.descricao}
+                  </p>
                 </TableCell>
 
                 <TableCell>
@@ -399,9 +473,15 @@ function MensageriaTable({ rows }: { rows: MensageriaItem[] }) {
 
                 <TableCell className="hidden xl:table-cell">
                   <div className="text-xs leading-tight">
-                    <div><span className="text-muted-foreground">Prot.:</span> {r.protocolo ?? "—"}</div>
-                    <div><span className="text-muted-foreground">Rec.:</span> {r.recibo ?? "—"}</div>
-                    <div><span className="text-muted-foreground">Lote:</span> {r.lote ?? "—"}</div>
+                    <div>
+                      <span className="text-muted-foreground">Prot.:</span> {r.protocolo ?? "—"}
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Rec.:</span> {r.recibo ?? "—"}
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Lote:</span> {r.lote ?? "—"}
+                    </div>
                   </div>
                 </TableCell>
 
@@ -430,11 +510,16 @@ function MensageriaTable({ rows }: { rows: MensageriaItem[] }) {
 
 function labelStatus(s: ESocialStatus) {
   switch (s) {
-    case "PROCESSING": return "Processando"
-    case "SENT": return "Enviado"
-    case "APPROVED": return "Aprovado"
-    case "ERROR": return "Erro"
-    case "CANCELLED": return "Cancelado"
+    case "PROCESSING":
+      return "Processando"
+    case "SENT":
+      return "Enviado"
+    case "APPROVED":
+      return "Aprovado"
+    case "ERROR":
+      return "Erro"
+    case "CANCELLED":
+      return "Cancelado"
   }
 }
 
@@ -448,20 +533,30 @@ function RowActions({ id }: { id: number }) {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem asChild>
-          <Link to={`/mensageria/${id}`}><Eye className="mr-2 h-4 w-4" /> Ver detalhes</Link>
+          <Link to={`/mensageria/${id}`}>
+            <Eye className="mr-2 h-4 w-4" /> Ver detalhes
+          </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link to={`/mensageria/${id}/xml`}><FileText className="mr-2 h-4 w-4" /> Ver XML</Link>
+          <Link to={`/mensageria/${id}/xml`}>
+            <FileText className="mr-2 h-4 w-4" /> Ver payload
+          </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link to={`/mensageria/${id}/retorno`}><ClipboardList className="mr-2 h-4 w-4" /> Ver retorno</Link>
+          <Link to={`/mensageria/${id}/retorno`}>
+            <ClipboardList className="mr-2 h-4 w-4" /> Ver retorno
+          </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link to={`/mensageria/${id}/reprocess`}><RefreshCw className="mr-2 h-4 w-4" /> Reprocessar</Link>
+          <Link to={`/mensageria/${id}/reprocess`}>
+            <RefreshCw className="mr-2 h-4 w-4" /> Reprocessar
+          </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link to={`#`}><ExternalLink className="mr-2 h-4 w-4" /> Abrir no sistema do cliente</Link>
+          <Link to="#">
+            <ExternalLink className="mr-2 h-4 w-4" /> Abrir no sistema externo
+          </Link>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

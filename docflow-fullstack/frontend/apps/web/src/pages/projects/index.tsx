@@ -82,7 +82,7 @@ const FILTER_OPTIONS = [
   { key: "ultimaAtualizacao", label: "Última atualização" },
   { key: "id", label: "ID" },
 ] as const;
-type FilterKey = typeof FILTER_OPTIONS[number]["key"];
+type FilterKey = (typeof FILTER_OPTIONS)[number]["key"];
 
 export default function ProjectsPage() {
   const navigate = useNavigate();
@@ -95,7 +95,7 @@ export default function ProjectsPage() {
   const [q, setQ] = useState<string>("");
 
   // filtros: múltipla seleção (mantém menu aberto ao marcar)
-  const ALL_FIELDS = FILTER_OPTIONS.map(o => o.key) as FilterKey[];
+  const ALL_FIELDS = FILTER_OPTIONS.map((o) => o.key) as FilterKey[];
   const [selectedFields, setSelectedFields] = useState<FilterKey[]>(ALL_FIELDS);
 
   // paginação (carregamos mais itens para a busca local ficar boa)
@@ -137,16 +137,21 @@ export default function ProjectsPage() {
   /** pega o valor textual de um campo para comparar na busca */
   const fieldValue = (p: ProjectListItem, key: FilterKey): string => {
     switch (key) {
-      case "nome": return norm(p.nome);
-      case "cliente": return norm(p.cliente);
-      case "documentos": return String(p.documentos ?? "");
-      case "status": return norm(p.status);
+      case "nome":
+        return norm(p.nome);
+      case "cliente":
+        return norm(p.cliente);
+      case "documentos":
+        return String(p.documentos ?? "");
+      case "status":
+        return norm(p.status);
       case "ultimaAtualizacao": {
         // busca por data: permite bater com data local "dd/mm/aaaa" ou relativo "há 2 dias"
         const local = p.ultimaAtualizacao ? new Date(p.ultimaAtualizacao).toLocaleDateString() : "";
         return norm(local) + " " + norm(formatRelative(p.ultimaAtualizacao));
       }
-      case "id": return String(p.id ?? "");
+      case "id":
+        return String(p.id ?? "");
     }
   };
 
@@ -155,9 +160,7 @@ export default function ProjectsPage() {
     const nq = norm(q);
     if (!nq) return projects;
     const fields = selectedFields.length ? selectedFields : ALL_FIELDS;
-    return projects.filter((p) =>
-      fields.some((f) => fieldValue(p, f).includes(nq))
-    );
+    return projects.filter((p) => fields.some((f) => fieldValue(p, f).includes(nq)));
   }, [projects, q, selectedFields]);
 
   // ao mudar a lista/filtragem, ajustar seleção
@@ -284,7 +287,8 @@ export default function ProjectsPage() {
             </div>
           </PageHeader>
 
-          <Card className="neon-border">
+          {/* Card com estilo “vidro” no modo claro, mantendo neon-border */}
+          <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
             <CardHeader>
               <CardTitle>Lista de Projetos</CardTitle>
               <CardDescription>Todos os projetos cadastrados no sistema</CardDescription>
@@ -326,13 +330,13 @@ export default function ProjectsPage() {
                         </TableCell>
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
-                            <FolderKanban className="h-4 w-4 text-muted-foreground" />
+                            <FolderKanban className="h-4 w-4 text-[hsla(182,80%,25%,0.945)] dark:text-cyan-300" />
                             {project.nome}
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <Users className="h-4 w-4 text-muted-foreground" />
+                            <Users className="h-4 w-4 text-[hsla(182,80%,25%,0.945)] dark:text-cyan-300" />
                             {project.cliente ?? "—"}
                           </div>
                         </TableCell>

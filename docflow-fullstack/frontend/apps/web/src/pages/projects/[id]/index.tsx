@@ -18,20 +18,28 @@ type MilestoneDTO = {
   id: number | string;
   name?: string;
   description?: string;
-  dueDate?: string | null; // dd/MM/yyyy
+  dueDate?: string | null;
   projectId?: number;
 };
 
 type DocumentDTO = {
   id: number | string;
   code?: string;
-  title?: string;          // vindo como "title" do backend
+  title?: string;
   revision?: string | number;
   projectId?: number;
-  // extras opcionais (podem vir null)
   type?: string | null;
   status?: string | null;
   milestoneName?: string | null;
+};
+
+/** 🔥 NOVO: tipos de documentos previstos (plannedDocTypes do backend) */
+type PlannedDocTypeDTO = {
+  id: number;
+  projectDisciplineId: number;
+  disciplineName: string;
+  docType: string;
+  quantity: number;
 };
 
 type ProjectDetailDTO = {
@@ -39,13 +47,15 @@ type ProjectDetailDTO = {
   code?: string;
   name?: string;
   status?: string | null;
-  startDate?: string | null;  // dd/MM/yyyy
-  plannedEndDate?: string | null;    // dd/MM/yyyy
+  startDate?: string | null;
+  plannedEndDate?: string | null;
   description?: string | null;
   clientId?: number | null;
   clientName?: string | null;
   milestones?: MilestoneDTO[];
   documents?: DocumentDTO[];
+  /** 🔥 NOVO: campo que vem do ProjectDetailDTO do backend */
+  plannedDocTypes?: PlannedDocTypeDTO[];
 };
 
 /* -------------------------------- Helpers ------------------------------- */
@@ -99,12 +109,12 @@ export default function ProjectDetailPage() {
       setErr(null);
 
       try {
-        // 1) tenta rota com /api/v1 (mais provável no seu backend)
+        // 1) Tenta o DTO agregador com /detail (que já inclui plannedDocTypes)
         let dto =
           (await tryGet<ProjectDetailDTO>(`/api/v1/projects/${id}/detail`)) ??
           (await tryGet<ProjectDetailDTO>(`/projects/${id}/detail`));
 
-        // 2) fallback construindo manualmente (se existir só /projects/:id e sub-rotas)
+        // 2) Fallback se não houver /detail
         if (!dto) {
           const base =
             (await tryGet<any>(`/api/v1/projects/${id}`)) ??
@@ -128,12 +138,13 @@ export default function ProjectDetailPage() {
               name: base.name,
               status: base.status ?? null,
               startDate: base.startDate ?? null,
-              plannedEndDate: base.plannedEndDate ?? base.plannedEndDate ?? null,
+              plannedEndDate: base.plannedEndDate ?? null,
               description: base.description ?? null,
               clientId: base.clientId ?? base.client?.id ?? null,
               clientName: base.clientName ?? base.client?.name ?? null,
               documents,
               milestones,
+              // sem plannedDocTypes no fallback (não tem endpoint aqui)
             };
           }
         }
@@ -167,6 +178,7 @@ export default function ProjectDetailPage() {
 
   const milestones = project?.milestones ?? [];
   const documents = project?.documents ?? [];
+  const plannedDocTypes = project?.plannedDocTypes ?? []; // 🔥 NOVO
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -206,8 +218,8 @@ export default function ProjectDetailPage() {
 
           {!loading && !err && project && (
             <div className="space-y-6">
-              {/* Informações Gerais */}
-              <Card className="neon-border">
+              {/* ⭐ INFORMACOES GERAIS - MODO CLARO AJUSTADO */}
+              <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
                 <CardHeader>
                   <CardTitle>Informações Gerais</CardTitle>
                 </CardHeader>
@@ -220,9 +232,11 @@ export default function ProjectDetailPage() {
                         <p className="font-medium">{clientName}</p>
                       </div>
                     </div>
+
                     <div className="flex items-center gap-2">
                       <Badge variant={statusVariant(status)}>{status}</Badge>
                     </div>
+
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
                       <div>
@@ -230,6 +244,7 @@ export default function ProjectDetailPage() {
                         <p className="font-medium">{startDate}</p>
                       </div>
                     </div>
+
                     <div className="flex items-center gap-2">
                       <Clock className="h-4 w-4 text-muted-foreground" />
                       <div>
@@ -238,6 +253,7 @@ export default function ProjectDetailPage() {
                       </div>
                     </div>
                   </div>
+
                   {description && (
                     <>
                       <Separator className="my-4" />
@@ -247,16 +263,18 @@ export default function ProjectDetailPage() {
                 </CardContent>
               </Card>
 
+              {/* ⭐ TABS AJUSTADOS + ABA DE PLANEJAMENTO */}
               <Tabs defaultValue="milestones" className="space-y-4">
-                <TabsList>
+                <TabsList className="backdrop-blur-md bg-background/70 dark:bg-card/70">
                   <TabsTrigger value="milestones">Marcos Contratuais</TabsTrigger>
                   <TabsTrigger value="documents">Documentos</TabsTrigger>
+                  <TabsTrigger value="planning">Planejamento</TabsTrigger> {/* 🔥 NOVO */}
                   <TabsTrigger value="suppliers">Fornecedores</TabsTrigger>
                 </TabsList>
 
                 {/* Marcos */}
                 <TabsContent value="milestones">
-                  <Card className="neon-border">
+                  <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
                     <CardHeader>
                       <CardTitle>Marcos Contratuais</CardTitle>
                       <CardDescription>Cronograma de entregas e marcos do projeto</CardDescription>
@@ -274,9 +292,7 @@ export default function ProjectDetailPage() {
                               <div key={String(m.id)} className="border rounded-lg p-4">
                                 <div className="flex items-center justify-between mb-2">
                                   <h3 className="font-medium">{nm}</h3>
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-sm text-muted-foreground">{due}</span>
-                                  </div>
+                                  <span className="text-sm text-muted-foreground">{due}</span>
                                 </div>
                                 {desc && <p className="text-sm text-muted-foreground mb-2">{desc}</p>}
                               </div>
@@ -288,9 +304,9 @@ export default function ProjectDetailPage() {
                   </Card>
                 </TabsContent>
 
-                {/* Documentos */}
+                {/* Documentos reais */}
                 <TabsContent value="documents">
-                  <Card className="neon-border">
+                  <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
                     <CardHeader>
                       <CardTitle>Documentos do Projeto</CardTitle>
                       <CardDescription>Lista de todos os documentos relacionados</CardDescription>
@@ -330,9 +346,56 @@ export default function ProjectDetailPage() {
                   </Card>
                 </TabsContent>
 
-                {/* Fornecedores (placeholder) */}
+                {/* 🔥 NOVO: Planejamento (tipos de documentos previstos) */}
+                <TabsContent value="planning">
+                  <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
+                    <CardHeader>
+                      <CardTitle>Planejamento de Documentos</CardTitle>
+                      <CardDescription>
+                        Tipos de documentos previstos por disciplina para este projeto.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {plannedDocTypes.length === 0 ? (
+                        <div className="text-sm text-muted-foreground">
+                          Nenhum tipo de documento previsto para este projeto.
+                        </div>
+                      ) : (
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Disciplina</TableHead>
+                              <TableHead>Tipo de documento</TableHead>
+                              <TableHead className="text-right">Quantidade</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {plannedDocTypes.map((pd) => (
+                              <TableRow key={pd.id}>
+                                <TableCell className="font-medium">
+                                  {pd.disciplineName}
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    <FileText className="h-4 w-4 text-muted-foreground" />
+                                    <span>{pd.docType}</span>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  {pd.quantity}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                {/* Fornecedores */}
                 <TabsContent value="suppliers">
-                  <Card className="neon-border">
+                  <Card className="neon-border border border-border/70 bg-background/70 dark:bg-card/90 backdrop-blur-md">
                     <CardHeader>
                       <CardTitle>Fornecedores</CardTitle>
                       <CardDescription>Fornecedores envolvidos no projeto</CardDescription>
